@@ -1,0 +1,30 @@
+# Maven
+target/
+*.jar
+*.war
+*.ear
+.mvn/timing.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+*.settings/
+
+# Spring Boot
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+
+# Docker volumes
+qdrant_data/
+mysql_data/
+
+# OS
+.DS_Store
+Thumbs.db
