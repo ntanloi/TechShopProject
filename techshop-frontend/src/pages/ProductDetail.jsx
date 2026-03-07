@@ -28,13 +28,34 @@ export default function ProductDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <p>Loading...</p>;
+  i; // thêm vào phần loading
+  if (loading)
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8 animate-pulse">
+        <div className="grid lg:grid-cols-2 gap-10">
+          <div className="aspect-square bg-gray-200 rounded-2xl" />
+          <div className="space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-3/4" />
+            <div className="h-6 bg-gray-200 rounded w-1/2" />
+            <div className="h-10 bg-gray-200 rounded w-1/3" />
+          </div>
+        </div>
+      </div>
+    );
   if (!product) return null;
 
   return (
-    <div>
-      <h1>{product.name}</h1>
-      <p>{product.description}</p>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="grid lg:grid-cols-2 gap-10">
+        <div>
+          <img src={product.imageUrl} alt={product.name} />
+        </div>
+
+        <div>
+          <h1>{product.name}</h1>
+          <p>{product.description}</p>
+        </div>
+      </div>
     </div>
   );
 }
