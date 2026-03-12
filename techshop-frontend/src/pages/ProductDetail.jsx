@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import productApi from "../api/productApi";
 import reviewApi from "../api/reviewApi";
+import useCartStore from "../store/cartStore";
+import { useAuth } from "../store/AuthContext";
+import { toast } from "react-toastify";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -11,6 +14,28 @@ export default function ProductDetail() {
   const [reviews, setReviews] = useState([]);
   const [rating, setRating] = useState({ averageRating: 0, totalReviews: 0 });
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { addToCart } = useCartStore();
+  const [qty, setQty] = useState(1);
+
+  const price = product.salePrice || product.price;
+
+  const handleAddToCart = async () => {
+    if (!user) {
+      toast.info("Vui lòng đăng nhập");
+      nav("/login");
+      return;
+    }
+
+    await addToCart({
+      productId: product.id,
+      productName: product.name,
+      unitPrice: price,
+      quantity: qty,
+    });
+
+    toast.success("Đã thêm vào giỏ hàng!");
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -54,6 +79,17 @@ export default function ProductDetail() {
         <div>
           <h1>{product.name}</h1>
           <p>{product.description}</p>
+        </div>
+        <div>
+          <p>{price}₫</p>
+
+          <div>
+            <button onClick={() => setQty(qty - 1)}>-</button>
+            <span>{qty}</span>
+            <button onClick={() => setQty(qty + 1)}>+</button>
+          </div>
+
+          <button onClick={handleAddToCart}>Thêm vào giỏ</button>
         </div>
       </div>
     </div>
