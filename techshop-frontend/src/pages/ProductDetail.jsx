@@ -19,6 +19,24 @@ export default function ProductDetail() {
   const [qty, setQty] = useState(1);
 
   const price = product.salePrice || product.price;
+  const [newReview, setNewReview] = useState({ rating: 5, comment: "" });
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+
+    await reviewApi.create({
+      productId: id,
+      ...newReview,
+    });
+
+    const [rRes, ratRes] = await Promise.all([
+      reviewApi.getByProduct(id),
+      reviewApi.getRating(id),
+    ]);
+
+    setReviews(rRes.data || []);
+    setRating(ratRes.data || {});
+  };
 
   const handleAddToCart = async () => {
     if (!user) {
@@ -71,6 +89,21 @@ export default function ProductDetail() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      <form onSubmit={handleSubmitReview}>
+        <input
+          value={newReview.comment}
+          onChange={(e) =>
+            setNewReview({ ...newReview, comment: e.target.value })
+          }
+        />
+        <button type="submit">Gửi</button>
+      </form>
+
+      {reviews.map((r) => (
+        <div key={r.id}>
+          <p>{r.comment}</p>
+        </div>
+      ))}
       <div className="grid lg:grid-cols-2 gap-10">
         <div>
           <img src={product.imageUrl} alt={product.name} />
