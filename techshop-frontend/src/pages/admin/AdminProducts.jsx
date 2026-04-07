@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import productApi from "../../api/productApi";
 import categoryApi from "../../api/categoryApi";
 import { Search } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "react-toastify";
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -10,6 +12,9 @@ export default function AdminProducts() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [modal, setModal] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ name: "", price: "" });
 
   const load = () => {
     setLoading(true);
@@ -23,6 +28,34 @@ export default function AdminProducts() {
         setTotalPages(r.data?.totalPages || 0);
       })
       .finally(() => setLoading(false));
+  };
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ name: "", price: "" });
+    setModal(true);
+  };
+
+  const openEdit = (p) => {
+    setEditing(p);
+    setForm(p);
+    setModal(true);
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (editing) await productApi.update(editing.id, form);
+    else await productApi.create(form);
+
+    toast.success("Saved!");
+    setModal(false);
+    load();
+  };
+
+  const handleDelete = async (id) => {
+    await productApi.delete(id);
+    toast.success("Deleted!");
+    load();
   };
 
   useEffect(() => {
@@ -54,5 +87,25 @@ export default function AdminProducts() {
         {i + 1}
       </button>
     ))}
+
+    <button onClick={openCreate}>Add</button>
+
+    {products.map((p) => (
+      <div key={p.id}>
+        {p.name}
+        <button onClick={() => openEdit(p)}>Edit</button>
+        <button onClick={() => handleDelete(p.id)}>Delete</button>
+      </div>
+    ))}
+
+    {modal && (
+      <form onSubmit={handleSave}>
+        <input
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
+        <button type="submit">Save</button>
+      </form>
+    )}
   </div>;
 }
