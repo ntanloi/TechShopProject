@@ -1,0 +1,68 @@
+export const API_ROUTES = {
+  auth: {
+    register: "/api/auth/register",
+    login: "/api/auth/login",
+    check: "/api/auth/check",
+  },
+  users: {
+    me: "/api/users/me",
+    all: "/api/users/admin/all",
+    toggle: (id) => `/api/users/admin/${id}/toggle`,
+  },
+  products: {
+    list: "/api/products",
+    detail: (id) => `/api/products/${id}`,
+    search: "/api/products/search",
+    byCategory: (id) => `/api/products/category/${id}`,
+    create: "/api/products",
+    update: (id) => `/api/products/${id}`,
+    delete: (id) => `/api/products/${id}`,
+  },
+  categories: {
+    list: "/api/categories",
+    detail: (id) => `/api/categories/${id}`,
+    create: "/api/categories",
+    update: (id) => `/api/categories/${id}`,
+    delete: (id) => `/api/categories/${id}`,
+  },
+  cart: {
+    get: "/api/cart",
+    add: "/api/cart",
+    update: (id) => `/api/cart/${id}`,
+    remove: (id) => `/api/cart/${id}`,
+    clear: "/api/cart/clear",
+  },
+  orders: {
+    my: "/api/orders/my",
+    detail: (id) => `/api/orders/${id}`,
+    create: "/api/orders",
+    cancel: (id) => `/api/orders/${id}/cancel`,
+    all: "/api/orders/admin/all",
+    updateStatus: (id) => `/api/orders/admin/${id}/status`,
+  },
+  payments: {
+    create: "/api/payments",
+    byOrder: (id) => `/api/payments/order/${id}`,
+    all: "/api/payments",
+  },
+  reviews: {
+    byProduct: (id) => `/api/reviews/product/${id}`,
+    rating: (id) => `/api/reviews/product/${id}/rating`,
+    create: "/api/reviews",
+    delete: (id) => `/api/reviews/${id}`,
+    my: "/api/reviews/my",
+  },
+  inventory: {
+    check: (id) => `/api/inventory/product/${id}/check`,
+    byProduct: (id) => `/api/inventory/product/${id}`,
+    lowStock: "/api/inventory/low-stock",
+    create: "/api/inventory",
+    adjust: (id) => `/api/inventory/product/${id}/adjust`,
+  },
+  notifications: {
+    byUser: (id) => `/api/notifications/user/${id}`,
+    unread: (id) => `/api/notifications/user/${id}/unread-count`,
+    markRead: (id) => `/api/notifications/${id}/read`,
+    markAllRead: (userId) => `/api/notifications/user/${userId}/read-all`,
+  },
+};
