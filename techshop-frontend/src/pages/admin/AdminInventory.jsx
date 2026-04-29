@@ -13,7 +13,9 @@ import { toast } from "react-toastify";
 
 const TABS = [
   { key: "all", label: "Tất cả kho" },
+  { key: "in", label: "Còn hàng" },
   { key: "low", label: "Sắp hết hàng" },
+  { key: "out", label: "Hết hàng" },
 ];
 
 function StockBadge({ available, threshold }) {
@@ -24,9 +26,12 @@ function StockBadge({ available, threshold }) {
   return <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">Còn hàng</span>;
 }
 
-function StatCard({ icon: Icon, label, value, color }) {
+function StatCard({ icon: Icon, label, value, color, onClick }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
+    <div
+      onClick={onClick}
+      className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4 ${onClick ? "cursor-pointer hover:shadow-md transition" : ""}`}
+    >
       <div className={`p-3 rounded-xl ${color}`}>
         <Icon className="h-5 w-5 text-white" />
       </div>
@@ -40,7 +45,7 @@ function StatCard({ icon: Icon, label, value, color }) {
 
 // ─── Adjust Modal ────────────────────────────────────────────────────────────
 
-function AdjustModal({ item, onClose, onDone }) {
+function AdjustModal({ item, product, onClose, onDone }) {
   const [delta, setDelta] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -63,9 +68,19 @@ function AdjustModal({ item, onClose, onDone }) {
   return (
     <ModalWrapper title="Điều chỉnh tồn kho" onClose={onClose}>
       <div className="mb-4 p-4 bg-gray-50 rounded-xl">
-        <p className="text-sm text-gray-500">Sản phẩm</p>
-        <p className="font-semibold text-gray-800">#{item.productId}</p>
-        <div className="flex gap-4 mt-2 text-sm">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 bg-white rounded-lg overflow-hidden shrink-0 border border-gray-100">
+            {product?.imageUrl
+              ? <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain" />
+              : <div className="w-full h-full flex items-center justify-center text-gray-300">📦</div>
+            }
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-gray-800 truncate">{product?.name ?? `Sản phẩm #${item.productId}`}</p>
+            {product?.brand && <p className="text-xs text-gray-400">{product.brand}</p>}
+          </div>
+        </div>
+        <div className="flex gap-4 text-sm">
           <span className="text-gray-500">Tổng: <strong className="text-gray-800">{item.quantity}</strong></span>
           <span className="text-gray-500">Đang giữ: <strong className="text-orange-600">{item.reservedQuantity}</strong></span>
           <span className="text-gray-500">Khả dụng: <strong className="text-green-600">{item.availableQuantity}</strong></span>
@@ -141,7 +156,7 @@ const OP_CONFIG = {
   },
 };
 
-function StockOpModal({ item, operation, onClose, onDone }) {
+function StockOpModal({ item, product, operation, onClose, onDone }) {
   const [quantity, setQuantity] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [orders, setOrders] = useState([]);
@@ -221,7 +236,18 @@ function StockOpModal({ item, operation, onClose, onDone }) {
 
       {/* Thông tin tồn kho hiện tại */}
       <div className="mb-4 p-4 bg-gray-50 rounded-xl text-sm">
-        <p className="text-gray-500 mb-1">Sản phẩm <strong className="text-gray-800">#{item.productId}</strong></p>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 bg-white rounded-lg overflow-hidden shrink-0 border border-gray-100">
+            {product?.imageUrl
+              ? <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain" />
+              : <div className="w-full h-full flex items-center justify-center text-gray-300">📦</div>
+            }
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-gray-800 truncate">{product?.name ?? `Sản phẩm #${item.productId}`}</p>
+            {product?.brand && <p className="text-xs text-gray-400">{product.brand}</p>}
+          </div>
+        </div>
         <div className="flex gap-4">
           <span className="text-gray-500">Tổng: <strong className="text-gray-800">{item.quantity}</strong></span>
           <span className="text-gray-500">Đang giữ: <strong className="text-orange-600">{item.reservedQuantity}</strong></span>
@@ -498,20 +524,26 @@ function ModalWrapper({ title, onClose, children }) {
 export default function AdminInventory() {
   const [allItems, setAllItems] = useState([]);
   const [lowStock, setLowStock] = useState([]);
+  const [productMap, setProductMap] = useState({}); // productId → product object
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
-  const [modal, setModal] = useState(null); // { type: 'adjust'|'reserve'|'release'|'commit'|'create', item? }
+  const [modal, setModal] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [allRes, lowRes] = await Promise.allSettled([
+      const [allRes, lowRes, prodRes] = await Promise.allSettled([
         inventoryApi.getAll(),
         inventoryApi.getLowStock(),
+        productApi.getAll({ size: 500 }),
       ]);
       if (allRes.status === "fulfilled") setAllItems(allRes.value.data || []);
       if (lowRes.status === "fulfilled") setLowStock(lowRes.value.data || []);
+      if (prodRes.status === "fulfilled") {
+        const products = prodRes.value.data?.content || prodRes.value.data || [];
+        setProductMap(Object.fromEntries(products.map((p) => [p.id, p])));
+      }
     } finally {
       setLoading(false);
     }
@@ -522,12 +554,24 @@ export default function AdminInventory() {
   const closeModal = () => setModal(null);
   const doneModal = () => { closeModal(); load(); };
 
-  const displayItems = tab === "low" ? lowStock : allItems;
-  const filtered = displayItems.filter((item) =>
-    String(item.productId).includes(search.trim())
-  );
+  const outOfStockItems = allItems.filter((i) => i.availableQuantity === 0);
+  const displayItems =
+    tab === "in"  ? allItems.filter((i) => i.availableQuantity > (i.lowStockThreshold ?? 5)) :
+    tab === "low" ? lowStock.filter((i) => i.availableQuantity > 0) :
+    tab === "out" ? outOfStockItems :
+    allItems;
+  const filtered = displayItems.filter((item) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    const product = productMap[item.productId];
+    return (
+      product?.name?.toLowerCase().includes(q) ||
+      product?.brand?.toLowerCase().includes(q) ||
+      String(item.productId).includes(q)
+    );
+  });
 
-  const outOfStock = allItems.filter((i) => i.availableQuantity === 0).length;
+  const outOfStock = outOfStockItems.length;
 
   return (
     <div className="space-y-6">
@@ -553,20 +597,29 @@ export default function AdminInventory() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={Warehouse} label="Tổng sản phẩm" value={allItems.length} color="bg-blue-500" />
-        <StatCard icon={Package} label="Còn hàng" value={allItems.filter(i => i.availableQuantity > 0).length} color="bg-green-500" />
-        <StatCard icon={TrendingDown} label="Sắp hết hàng" value={lowStock.length} color="bg-yellow-500" />
-        <StatCard icon={AlertTriangle} label="Hết hàng" value={outOfStock} color="bg-red-500" />
+        <StatCard icon={Package} label="Còn hàng" value={allItems.filter(i => i.availableQuantity > (i.lowStockThreshold ?? 5)).length} color="bg-green-500" onClick={() => setTab("in")} />
+        <StatCard icon={TrendingDown} label="Sắp hết hàng" value={lowStock.filter(i => i.availableQuantity > 0).length} color="bg-yellow-500" onClick={() => setTab("low")} />
+        <StatCard icon={AlertTriangle} label="Hết hàng" value={outOfStock} color="bg-red-500" onClick={() => setTab("out")} />
       </div>
 
       {/* Low stock alert banner */}
-      {lowStock.length > 0 && (
+      {(lowStock.filter(i => i.availableQuantity > 0).length > 0 || outOfStock > 0) && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 flex items-center gap-3">
           <AlertTriangle className="h-5 w-5 text-yellow-600 shrink-0" />
           <p className="text-sm text-yellow-800">
-            <strong>{lowStock.length} sản phẩm</strong> đang ở mức tồn kho thấp.
-            <button onClick={() => setTab("low")} className="ml-1 underline font-medium hover:text-yellow-900">
-              Xem ngay
-            </button>
+            {lowStock.filter(i => i.availableQuantity > 0).length > 0 && (
+              <>
+                <strong>{lowStock.filter(i => i.availableQuantity > 0).length} sản phẩm</strong> sắp hết hàng.
+                <button onClick={() => setTab("low")} className="ml-1 underline font-medium hover:text-yellow-900">Xem ngay</button>
+              </>
+            )}
+            {lowStock.filter(i => i.availableQuantity > 0).length > 0 && outOfStock > 0 && <span className="mx-2">·</span>}
+            {outOfStock > 0 && (
+              <>
+                <strong>{outOfStock} sản phẩm</strong> đã hết hàng.
+                <button onClick={() => setTab("out")} className="ml-1 underline font-medium hover:text-yellow-900">Xem ngay</button>
+              </>
+            )}
           </p>
         </div>
       )}
@@ -578,8 +631,13 @@ export default function AdminInventory() {
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === t.key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
               {t.label}
-              {t.key === "low" && lowStock.length > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.5 bg-yellow-500 text-white text-xs rounded-full">{lowStock.length}</span>
+              {t.key === "low" && lowStock.filter(i => i.availableQuantity > 0).length > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.5 bg-yellow-500 text-white text-xs rounded-full">
+                  {lowStock.filter(i => i.availableQuantity > 0).length}
+                </span>
+              )}
+              {t.key === "out" && outOfStock > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.5 bg-red-500 text-white text-xs rounded-full">{outOfStock}</span>
               )}
             </button>
           ))}
@@ -587,7 +645,7 @@ export default function AdminInventory() {
         <div className="relative sm:ml-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm theo ID sản phẩm..."
+            placeholder="Tìm theo tên sản phẩm..."
             className="pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 w-64" />
         </div>
       </div>
@@ -598,7 +656,7 @@ export default function AdminInventory() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                {["ID SP", "Tổng kho", "Đang giữ", "Khả dụng", "Ngưỡng", "Trạng thái", "Thao tác"].map((h) => (
+                {["Sản phẩm", "Tổng kho", "Đang giữ", "Khả dụng", "Ngưỡng", "Trạng thái", "Thao tác"].map((h) => (
                   <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                     {h}
                   </th>
@@ -618,14 +676,34 @@ export default function AdminInventory() {
                 <tr>
                   <td colSpan={7} className="px-5 py-12 text-center text-gray-400">
                     <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                    <p>{tab === "low" ? "Không có sản phẩm nào sắp hết hàng" : "Không có dữ liệu tồn kho"}</p>
+                    <p>{tab === "in" ? "Không có sản phẩm nào còn hàng" : tab === "low" ? "Không có sản phẩm nào sắp hết hàng" : tab === "out" ? "Không có sản phẩm nào hết hàng" : "Không có dữ liệu tồn kho"}</p>
                   </td>
                 </tr>
               ) : (
                 filtered.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50 transition">
                     <td className="px-5 py-4">
-                      <span className="font-mono font-semibold text-gray-700">#{item.productId}</span>
+                      {(() => {
+                        const p = productMap[item.productId];
+                        return (
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden shrink-0">
+                              {p?.imageUrl
+                                ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain" />
+                                : <div className="w-full h-full flex items-center justify-center text-gray-300">📦</div>
+                              }
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-800 truncate max-w-[180px]">
+                                {p?.name ?? `Sản phẩm #${item.productId}`}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {p?.brand ? `${p.brand} · ` : ""}ID: {item.productId}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-5 py-4 font-semibold text-gray-800">{item.quantity}</td>
                     <td className="px-5 py-4">
@@ -678,9 +756,9 @@ export default function AdminInventory() {
           existingProductIds={new Set(allItems.map((i) => i.productId))}
         />
       )}
-      {modal?.type === "adjust" && <AdjustModal item={modal.item} onClose={closeModal} onDone={doneModal} />}
+      {modal?.type === "adjust" && <AdjustModal item={modal.item} product={productMap[modal.item.productId]} onClose={closeModal} onDone={doneModal} />}
       {["reserve", "release", "commit"].includes(modal?.type) && (
-        <StockOpModal item={modal.item} operation={modal.type} onClose={closeModal} onDone={doneModal} />
+        <StockOpModal item={modal.item} product={productMap[modal.item.productId]} operation={modal.type} onClose={closeModal} onDone={doneModal} />
       )}
     </div>
   );
