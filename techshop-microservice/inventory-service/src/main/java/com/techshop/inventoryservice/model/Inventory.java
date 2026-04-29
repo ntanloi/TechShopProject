@@ -22,9 +22,13 @@ public class Inventory {
     @Column(nullable = false)
     private Integer quantity;
 
-    private Integer reservedQuantity = 0;  // đang chờ xử lý đơn hàng
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer reservedQuantity = 0;  // số lượng đang được giữ chờ xác nhận đơn hàng
 
-    private Integer lowStockThreshold = 5;
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer lowStockThreshold = 5; // ngưỡng cảnh báo hàng sắp hết
 
     private LocalDateTime updatedAt;
 
@@ -34,7 +38,17 @@ public class Inventory {
         updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * Số lượng thực tế có thể bán = tổng tồn kho - số đang giữ
+     */
     public Integer getAvailableQuantity() {
-        return quantity - reservedQuantity;
+        return quantity - (reservedQuantity != null ? reservedQuantity : 0);
+    }
+
+    /**
+     * Kiểm tra hàng sắp hết dựa trên ngưỡng cấu hình
+     */
+    public boolean isLowStock() {
+        return getAvailableQuantity() <= (lowStockThreshold != null ? lowStockThreshold : 5);
     }
 }
