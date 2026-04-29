@@ -1,0 +1,14 @@
+# Template config cho Cloudinary
+# Copy file này thành application-local.yml và điền thông tin của bạn
+# File application-local.yml sẽ không được commit vào Git
+
+cloudinary:
+  cloud-name: your-cloud-name-here
+  api-key: your-api-key-here
+  api-secret: your-api-secret-here
+
+# Lấy credentials tại: https://cloudinary.com/console
+# 1. Đăng ký/Đăng nhập Cloudinary
+# 2. Vào Dashboard
+# 3. Copy Cloud name, API Key, API Secret
+# 4. Paste vào file application-local.yml

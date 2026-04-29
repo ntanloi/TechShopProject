@@ -1,0 +1,86 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║          🚀 TECHSHOP COMMON-LIB - START HERE 🚀              ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+📌 BẠN LÀ AI?
+
+   👨‍💻 Developer mới        → Đọc: CLOUDINARY_SETUP.md
+   🤖 AI Assistant         → Đọc: AI_INSTRUCTIONS.md
+   👔 Team Lead            → Đọc: USAGE_GUIDE.txt
+   📚 Muốn hiểu chi tiết   → Đọc: README.md
+   🗺️  Muốn xem tổng quan  → Đọc: INDEX.md
+
+───────────────────────────────────────────────────────────────
+
+⚡ QUICK START (3 BƯỚC)
+
+   1. Build common-lib:
+      cd techshop-microservice/common-lib
+      mvn clean install
+
+   2. Thêm vào service cần dùng:
+      - Thêm dependency vào pom.xml
+      - Tạo application-local.yml
+      - Thêm @ComponentScan
+
+   3. Sử dụng:
+      @Autowired CloudinaryService cloudinaryService;
+      String url = cloudinaryService.uploadImage(file, "products");
+
+───────────────────────────────────────────────────────────────
+
+📁 CẤU TRÚC FILES
+
+   START_HERE.txt              ← BẠN ĐANG Ở ĐÂY
+   INDEX.md                    ← Danh mục tất cả files
+   CLOUDINARY_SETUP.md         ← Quick start (3 bước)
+   README.md                   ← Chi tiết đầy đủ
+   AI_INSTRUCTIONS.md          ← Checklist cho AI
+   USAGE_GUIDE.txt             ← Tổng quan ngắn gọn
+   application-template.yml    ← Template config
+   pom.xml                     ← Maven config
+   src/                        ← Source code
+
+───────────────────────────────────────────────────────────────
+
+🎯 SERVICES CẦN CLOUDINARY
+
+   ✅ Product Service    → Upload ảnh sản phẩm & danh mục
+   ✅ User Service       → Upload avatar
+   ⚠️  Review Service    → Upload ảnh review (optional)
+   ❌ Các service khác   → KHÔNG cần
+
+───────────────────────────────────────────────────────────────
+
+🔑 CLOUDINARY CREDENTIALS
+
+   Lấy tại: https://cloudinary.com/console
+   
+   Cần 3 thông tin:
+   - Cloud name
+   - API Key  
+   - API Secret
+
+───────────────────────────────────────────────────────────────
+
+⚠️  LƯU Ý QUAN TRỌNG
+
+   ❌ KHÔNG commit file application-local.yml
+   ✅ Dùng application-template.yml làm mẫu
+   ✅ Mỗi developer tự tạo config riêng
+   ✅ Build common-lib trước khi dùng
+
+───────────────────────────────────────────────────────────────
+
+📖 ĐỌC TIẾP
+
+   → Mở file INDEX.md để xem danh mục đầy đủ
+   → Hoặc đọc CLOUDINARY_SETUP.md để bắt đầu ngay
+
+───────────────────────────────────────────────────────────────
+
+                    Happy Coding! 🚀
+
+╚═══════════════════════════════════════════════════════════════╝
