@@ -27,11 +27,12 @@ public class InventoryController {
                                                            @RequestParam Integer quantity) {
         return inventoryRepository.findByProductId(productId).map(inv -> {
             boolean available = inv.getAvailableQuantity() >= quantity;
-            return ResponseEntity.ok(Map.of(
-                    "productId", productId,
-                    "available", available,
-                    "stock", inv.getAvailableQuantity()
-            ));
+            Map<String, Object> response = Map.of(
+                    "productId", (Object) productId,
+                    "available", (Object) available,
+                    "stock", (Object) inv.getAvailableQuantity()
+            );
+            return ResponseEntity.ok(response);
         }).orElse(ResponseEntity.notFound().build());
     }
 
