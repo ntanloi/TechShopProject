@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: jdbc:mysql://notification-db:3306/techshop_notificationdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
+  instance:
+    prefer-ip-address: true
