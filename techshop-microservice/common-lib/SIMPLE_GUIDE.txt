@@ -1,0 +1,36 @@
+═══════════════════════════════════════════════════════════════
+  CLOUDINARY - HƯỚNG DẪN ĐƠN GIẢN
+═══════════════════════════════════════════════════════════════
+
+📁 TẤT CẢ ẢNH VÀO: Home/techshop/
+
+   Không có subfolder, tất cả ảnh nằm chung trong techshop/
+
+───────────────────────────────────────────────────────────────
+
+💻 SỬ DỤNG:
+
+   // Upload ảnh
+   String url = cloudinaryService.uploadImage(file, null);
+   
+   // Delete ảnh
+   cloudinaryService.deleteImage(url);
+
+───────────────────────────────────────────────────────────────
+
+⚡ SETUP:
+
+   1. Build: cd common-lib && mvn clean install
+   2. Add dependency vào pom.xml
+   3. Tạo application-local.yml với Cloudinary config
+   4. Thêm @ComponentScan("com.techshop.common")
+
+───────────────────────────────────────────────────────────────
+
+📖 ĐỌC THÊM:
+
+   - CLOUDINARY_SETUP.md  → Quick start
+   - README.md            → Chi tiết đầy đủ
+   - AI_INSTRUCTIONS.md   → Code template
+
+═══════════════════════════════════════════════════════════════

@@ -1,29 +1,31 @@
-# Maven
-target/
-*.jar
-*.war
-*.ear
-.mvn/timing.properties
+# Cloudinary credentials
+**/application-local.yml
+**/application-local.properties
+
+# Sensitive config
+**/*-local.yml
+**/*-local.properties
+.env
+.env.local
 
 # IDE
 .idea/
 *.iml
 .vscode/
-*.classpath
-*.project
-*.settings/
+*.swp
+*.swo
 
-# Spring Boot
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# Logs
 *.log
 logs/
-
-# Environment
-.env
-.env.local
-
-# Docker volumes
-qdrant_data/
-mysql_data/
 
 # OS
 .DS_Store

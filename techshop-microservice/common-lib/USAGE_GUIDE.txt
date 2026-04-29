@@ -1,0 +1,55 @@
+═══════════════════════════════════════════════════════════════
+  HƯỚNG DẪN SỬ DỤNG COMMON-LIB - CLOUDINARY
+═══════════════════════════════════════════════════════════════
+
+📌 CHO AI/DEVELOPER:
+   Khi được yêu cầu implement Cloudinary cho 1 service,
+   hãy đọc các file sau theo thứ tự:
+
+   1. CLOUDINARY_SETUP.md      → Quick start (3 bước)
+   2. common-lib/README.md     → Chi tiết đầy đủ
+   3. AI_INSTRUCTIONS.md       → Checklist & code template
+
+═══════════════════════════════════════════════════════════════
+
+🎯 SERVICES CẦN CLOUDINARY:
+
+   ✅ Product Service   → Upload ảnh sản phẩm & danh mục
+   ✅ User Service      → Upload avatar
+   ⚠️  Review Service   → Upload ảnh review (optional)
+   
+   ❌ Các service khác KHÔNG cần
+
+═══════════════════════════════════════════════════════════════
+
+⚡ QUICK COMMAND:
+
+   # Build common-lib
+   cd techshop-microservice/common-lib
+   mvn clean install
+
+   # Thêm vào service
+   # 1. Thêm dependency vào pom.xml
+   # 2. Tạo application-local.yml với Cloudinary config
+   # 3. Thêm @ComponentScan("com.techshop.common")
+   # 4. Inject CloudinaryService vào Controller
+
+═══════════════════════════════════════════════════════════════
+
+🔑 CLOUDINARY CREDENTIALS:
+
+   Lấy tại: https://cloudinary.com/console
+   
+   Cần 3 thông tin:
+   - Cloud name
+   - API Key
+   - API Secret
+
+═══════════════════════════════════════════════════════════════
+
+⚠️  LƯU Ý:
+   - KHÔNG commit file application-local.yml
+   - Mỗi developer tự tạo file config riêng
+   - Dùng application-template.yml làm mẫu
+
+═══════════════════════════════════════════════════════════════
