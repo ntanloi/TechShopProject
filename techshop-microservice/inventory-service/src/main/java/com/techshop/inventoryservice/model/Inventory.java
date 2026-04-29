@@ -46,9 +46,11 @@ public class Inventory {
     }
 
     /**
-     * Kiểm tra hàng sắp hết dựa trên ngưỡng cấu hình
+     * Kiểm tra hàng sắp hết dựa trên ngưỡng cấu hình (không tính hàng đã hết hoàn toàn)
      */
     public boolean isLowStock() {
-        return getAvailableQuantity() <= (lowStockThreshold != null ? lowStockThreshold : 5);
+        int available = getAvailableQuantity();
+        int threshold = lowStockThreshold != null ? lowStockThreshold : 5;
+        return available > 0 && available <= threshold;
     }
 }
