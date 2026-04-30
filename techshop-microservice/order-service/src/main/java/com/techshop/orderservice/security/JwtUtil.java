@@ -30,6 +30,18 @@ public class JwtUtil {
         } catch (JwtException e) { return null; }
     }
 
+    public Long extractUserId(String token) {
+        try {
+            Object userId = extractAllClaims(token).get("userId");
+            if (userId instanceof Integer) {
+                return ((Integer) userId).longValue();
+            } else if (userId instanceof Long) {
+                return (Long) userId;
+            }
+            return null;
+        } catch (JwtException e) { return null; }
+    }
+
     public boolean isTokenValid(String token) {
         try { return !extractAllClaims(token).getExpiration().before(new Date()); }
         catch (Exception e) { return false; }

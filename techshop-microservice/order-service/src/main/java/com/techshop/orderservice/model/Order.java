@@ -1,5 +1,6 @@
 package com.techshop.orderservice.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -48,12 +49,17 @@ public class Order {
     @Builder.Default
     private PaymentStatus paymentStatus = PaymentStatus.UNPAID;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @Column(length = 1000)
+    private String paymentUrl; // URL để redirect đến VNPay (nếu method = VNPAY)
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OrderItem> items;
 
     @Column(updatable = false)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updatedAt;
 
     @PrePersist

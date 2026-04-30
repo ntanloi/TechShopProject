@@ -42,7 +42,7 @@ public class AuthService {
         userRepository.save(user);
         log.info("User registered: {}", user.getEmail());
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name(), user.getId());
 
         return AuthResponse.builder()
                 .token(token)
@@ -69,7 +69,7 @@ public class AuthService {
         }
 
         // Subject = email để Authentication.getName() trả về email
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name(), user.getId());
 
         return AuthResponse.builder()
                 .token(token)
