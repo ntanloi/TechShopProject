@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { ArrowLeft, Package, MapPin, Phone, Clock, CreditCard } from "lucide-react";
 import orderApi from "../api/orderApi";
 import { useAuth } from "../store/AuthContext";
@@ -20,14 +20,32 @@ export default function OrderDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (!user) { nav("/login"); return; }
-    orderApi.getById(id).then((r) => setOrder(r.data)).catch(() => nav("/orders")).finally(() => setLoading(false));
-  }, [id, user]);
+    
+    const fetchOrder = () => {
+      setLoading(true);
+      orderApi.getById(id)
+        .then((r) => {
+          console.log("Order data received:", r.data); // Debug log
+          setOrder(r.data);
+        })
+        .catch(() => nav("/orders"))
+        .finally(() => setLoading(false));
+    };
+    
+    fetchOrder();
+    
+    // Nếu có refresh param, xóa nó khỏi URL sau khi fetch
+    if (searchParams.get('refresh')) {
+      window.history.replaceState({}, '', `/orders/${id}`);
+    }
+  }, [id, user, nav, searchParams]);
 
   const handleCancel = async () => {
     if (!confirm("Bạn có chắc muốn hủy đơn hàng này?")) return;
@@ -60,10 +78,10 @@ export default function OrderDetail() {
         <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Đơn hàng #{order.orderCode}</h1>
+              <h1 className="text-xl font-bold text-gray-900">Đơn hàng #{order.orderCode || "N/A"}</h1>
               <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
-                {new Date(order.createdAt).toLocaleString("vi-VN")}
+                {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN") : "Đang cập nhật"}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -106,9 +124,18 @@ export default function OrderDetail() {
               <MapPin className="h-5 w-5 text-orange-500" /> Thông tin giao hàng
             </h2>
             <div className="space-y-2 text-sm text-gray-600">
-              <p className="flex items-center gap-2"><Package className="h-4 w-4 text-gray-400" /> {order.receiverName}</p>
-              <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-gray-400" /> {order.receiverPhone}</p>
-              <p className="flex items-start gap-2"><MapPin className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" /> {order.shippingAddress}</p>
+              <p className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-gray-400" /> 
+                {order.receiverName || "Chưa có thông tin"}
+              </p>
+              <p className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-gray-400" /> 
+                {order.receiverPhone || "Chưa có thông tin"}
+              </p>
+              <p className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" /> 
+                {order.shippingAddress || "Chưa có thông tin"}
+              </p>
               {order.note && <p className="text-gray-500 italic">Ghi chú: {order.note}</p>}
             </div>
           </div>
@@ -131,7 +158,9 @@ export default function OrderDetail() {
               </div>
               <div className="flex justify-between font-bold text-gray-900 pt-2 border-t">
                 <span>Tổng cộng</span>
-                <span className="text-orange-500">{Number(order.totalAmount).toLocaleString("vi-VN")}₫</span>
+                <span className="text-orange-500">
+                  {order.totalAmount ? Number(order.totalAmount).toLocaleString("vi-VN") : "0"}₫
+                </span>
               </div>
             </div>
           </div>
@@ -149,11 +178,15 @@ export default function OrderDetail() {
                   ) : <div className="w-full h-full flex items-center justify-center text-gray-300">📦</div>}
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-gray-800 text-sm">{item.productName}</p>
+                  <p className="font-medium text-gray-800 text-sm">{item.productName || "Sản phẩm"}</p>
                   {item.productBrand && <p className="text-xs text-orange-500">{item.productBrand}</p>}
-                  <p className="text-xs text-gray-500 mt-1">x{item.quantity} × {Number(item.unitPrice).toLocaleString("vi-VN")}₫</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    x{item.quantity || 0} × {item.unitPrice ? Number(item.unitPrice).toLocaleString("vi-VN") : "0"}₫
+                  </p>
                 </div>
-                <p className="font-bold text-gray-800 shrink-0">{Number(item.subtotal).toLocaleString("vi-VN")}₫</p>
+                <p className="font-bold text-gray-800 shrink-0">
+                  {item.subtotal ? Number(item.subtotal).toLocaleString("vi-VN") : "0"}₫
+                </p>
               </div>
             ))}
           </div>

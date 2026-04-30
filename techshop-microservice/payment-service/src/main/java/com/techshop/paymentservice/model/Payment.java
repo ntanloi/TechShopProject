@@ -35,6 +35,8 @@ public class Payment {
     private PaymentStatus status = PaymentStatus.PENDING;
 
     private String transactionId;  // VNPay transaction ID
+    
+    @Column(length = 1000)  // Tăng kích thước để chứa URL VNPay dài
     private String paymentUrl;     // VNPay redirect URL
 
     @Column(updatable = false)
