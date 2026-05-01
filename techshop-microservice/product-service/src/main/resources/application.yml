@@ -40,6 +40,11 @@ management:
 jwt:
   secret: ${JWT_SECRET:techshop-super-secret-key-change-in-production-2024}
 
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dkbufngjx}
+  api-key: ${CLOUDINARY_API_KEY:656675479136419}
+  api-secret: ${CLOUDINARY_API_SECRET:your-api-secret}
+
 logging:
   level:
     com.techshop.productservice: DEBUG
