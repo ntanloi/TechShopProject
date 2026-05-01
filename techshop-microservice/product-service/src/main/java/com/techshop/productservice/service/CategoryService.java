@@ -26,11 +26,24 @@ public class CategoryService {
     }
 
     public Category create(Category category) {
+        // Validate name không trùng
+        if (categoryRepository.existsByName(category.getName())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                    "Tên danh mục đã tồn tại");
+        }
         return categoryRepository.save(category);
     }
 
     public Category update(Long id, Category updated) {
         Category category = getById(id);
+        
+        // Validate name không trùng (exclude current category)
+        Category existingCategory = categoryRepository.findByName(updated.getName());
+        if (existingCategory != null && !existingCategory.getId().equals(id)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                    "Tên danh mục đã tồn tại");
+        }
+        
         category.setName(updated.getName());
         category.setDescription(updated.getDescription());
         category.setImageUrl(updated.getImageUrl());
@@ -42,6 +55,14 @@ public class CategoryService {
         if (!categoryRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy danh mục id=" + id);
         }
+        
+        // Check category có products trước khi xóa
+        long productCount = categoryRepository.countProductsByCategoryId(id);
+        if (productCount > 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                    "Không thể xóa danh mục đang có " + productCount + " sản phẩm");
+        }
+        
         categoryRepository.deleteById(id);
     }
 }
