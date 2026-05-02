@@ -30,3 +30,8 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Documentation (local notes) - ignore all .md except README.md
+*.md
+!README.md
+!**/README.md
