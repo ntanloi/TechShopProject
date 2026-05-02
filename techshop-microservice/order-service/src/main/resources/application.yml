@@ -28,6 +28,19 @@ eureka:
     service-url:
       defaultZone: http://localhost:8761/eureka/
 
+# Feign Client Configuration
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 5000
+        loggerLevel: basic
+      inventory-service:
+        connectTimeout: 3000
+        readTimeout: 3000
+        loggerLevel: full
+
 management:
   endpoints:
     web:
