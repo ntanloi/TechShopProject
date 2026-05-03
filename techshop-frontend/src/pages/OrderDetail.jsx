@@ -34,17 +34,17 @@ export default function OrderDetail() {
         .then((r) => {
           console.log("Order data received:", r.data); // Debug log
           setOrder(r.data);
+          
+          // Nếu có refresh param, xóa nó khỏi URL sau khi fetch
+          if (searchParams.get('refresh')) {
+            window.history.replaceState({}, '', `/orders/${id}`);
+          }
         })
         .catch(() => nav("/orders"))
         .finally(() => setLoading(false));
     };
     
     fetchOrder();
-    
-    // Nếu có refresh param, xóa nó khỏi URL sau khi fetch
-    if (searchParams.get('refresh')) {
-      window.history.replaceState({}, '', `/orders/${id}`);
-    }
   }, [id, user, nav, searchParams]);
 
   const handleCancel = async () => {
