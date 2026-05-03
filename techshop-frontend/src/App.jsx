@@ -26,6 +26,7 @@ import Checkout from "@/pages/Checkout.jsx";
 import Orders from "@/pages/Orders.jsx";
 import OrderDetail from "@/pages/OrderDetail.jsx";
 import Profile from "@/pages/Profile.jsx";
+import PaymentResult from "@/pages/PaymentResult.jsx";
 
 // Admin pages
 import Dashboard from "@/pages/admin/Dashboard.jsx";
@@ -66,6 +67,7 @@ export default function App() {
           <Route path="/orders" element={<RequireAuth><Orders /></RequireAuth>} />
           <Route path="/orders/:id" element={<RequireAuth><OrderDetail /></RequireAuth>} />
           <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+          <Route path="/payment-result" element={<PaymentResult />} />
 
           {/* ===== ADMIN ===== */}
           <Route path="/admin" element={<RequireAuth roles={["ADMIN", "STAFF"]}><AdminLayout /></RequireAuth>}>

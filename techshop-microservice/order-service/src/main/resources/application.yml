@@ -53,6 +53,9 @@ management:
 jwt:
   secret: ${JWT_SECRET:techshop-super-secret-key-change-in-production-2024}
 
+payment:
+  return-url: ${PAYMENT_RETURN_URL:http://localhost:5173/payment-result}
+
 logging:
   level:
     com.techshop.orderservice: DEBUG

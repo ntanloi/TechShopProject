@@ -1,5 +1,6 @@
 package com.techshop.productservice.service;
 
+import com.techshop.common.service.CloudinaryService;
 import com.techshop.productservice.dto.ProductRequest;
 import com.techshop.productservice.model.Category;
 import com.techshop.productservice.model.Product;
@@ -11,7 +12,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.io.IOException;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +24,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final CloudinaryService cloudinaryService;
 
     public Page<Product> getAll(Pageable pageable) {
         return productRepository.findByActiveTrue(pageable);
@@ -40,6 +45,31 @@ public class ProductService {
     }
 
     public Product create(ProductRequest request) {
+        // Validate price > 0
+        if (request.getPrice() == null || request.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá phải lớn hơn 0");
+        }
+
+        // Validate salePrice > 0 (nếu có)
+        if (request.getSalePrice() != null) {
+            if (request.getSalePrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá khuyến mãi phải lớn hơn 0");
+            }
+            // Validate salePrice <= price
+            if (request.getSalePrice().compareTo(request.getPrice()) > 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá khuyến mãi phải nhỏ hơn hoặc bằng giá gốc");
+            }
+        }
+
+        // Check SKU unique
+        if (request.getSku() != null && !request.getSku().trim().isEmpty()) {
+            boolean skuExists = productRepository.existsBySku(request.getSku());
+            if (skuExists) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã SKU đã tồn tại");
+            }
+        }
+
+        // Validate category exists
         Category category = null;
         if (request.getCategoryId() != null) {
             category = categoryRepository.findById(request.getCategoryId())
@@ -67,6 +97,31 @@ public class ProductService {
     public Product update(Long id, ProductRequest request) {
         Product product = getById(id);
 
+        // Validate price > 0
+        if (request.getPrice() == null || request.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá phải lớn hơn 0");
+        }
+
+        // Validate salePrice > 0 (nếu có)
+        if (request.getSalePrice() != null) {
+            if (request.getSalePrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá khuyến mãi phải lớn hơn 0");
+            }
+            // Validate salePrice <= price
+            if (request.getSalePrice().compareTo(request.getPrice()) > 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá khuyến mãi phải nhỏ hơn hoặc bằng giá gốc");
+            }
+        }
+
+        // Check SKU unique (exclude current product)
+        if (request.getSku() != null && !request.getSku().trim().isEmpty()) {
+            Product existingProduct = productRepository.findBySku(request.getSku());
+            if (existingProduct != null && !existingProduct.getId().equals(id)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã SKU đã tồn tại");
+            }
+        }
+
+        // Validate category exists
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -92,5 +147,9 @@ public class ProductService {
         product.setActive(false);
         productRepository.save(product);
         log.info("Product {} soft-deleted", id);
+    }
+
+    public String uploadImage(MultipartFile file) throws IOException {
+        return cloudinaryService.uploadImage(file, "products");
     }
 }
