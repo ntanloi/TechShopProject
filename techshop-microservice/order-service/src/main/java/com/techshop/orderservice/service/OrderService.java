@@ -305,18 +305,87 @@ public class OrderService {
         return order;
     }
 
+    @Transactional
     public Order updateStatus(Long id, Order.OrderStatus status) {
         Order order = getById(id);
+        Order.OrderStatus oldStatus = order.getStatus();
+        
         order.setStatus(status);
-        log.info("Order {} status updated to {}", id, status);
+        log.info("Order {} status updated from {} to {}", id, oldStatus, status);
+        
+        // ─────────────────────────────────────────────
+        // COMMIT stock khi đơn hàng chuyển sang DELIVERED
+        // ─────────────────────────────────────────────
+        if (status == Order.OrderStatus.DELIVERED && oldStatus != Order.OrderStatus.DELIVERED) {
+            log.info("Order {} delivered, committing stock (trừ hàng thực tế)", order.getOrderCode());
+            
+            for (OrderItem item : order.getItems()) {
+                try {
+                    InventoryClient.StockRequest commitRequest = new InventoryClient.StockRequest(
+                            item.getQuantity(),
+                            order.getOrderCode()
+                    );
+
+                    ResponseEntity<InventoryClient.StockOperationResponse> commitResponse =
+                            inventoryClient.commitStock(item.getProductId(), commitRequest);
+
+                    if (commitResponse.getStatusCode().is2xxSuccessful()) {
+                        log.info("Successfully committed stock for productId={}, quantity={} (Order: {})",
+                                item.getProductId(), item.getQuantity(), order.getOrderCode());
+                    } else {
+                        log.warn("Failed to commit stock for productId={}", item.getProductId());
+                    }
+                } catch (FeignException e) {
+                    log.error("Error committing stock for productId={}: {}",
+                            item.getProductId(), e.getMessage());
+                    // Không throw exception, vẫn cho phép cập nhật trạng thái
+                    // Admin có thể xử lý thủ công sau
+                }
+            }
+        }
+        
+        // ─────────────────────────────────────────────
+        // RELEASE stock nếu đơn bị hủy từ admin
+        // ─────────────────────────────────────────────
+        if (status == Order.OrderStatus.CANCELLED && oldStatus != Order.OrderStatus.CANCELLED) {
+            log.info("Order {} cancelled by admin, releasing stock", order.getOrderCode());
+            
+            for (OrderItem item : order.getItems()) {
+                try {
+                    InventoryClient.StockRequest releaseRequest = new InventoryClient.StockRequest(
+                            item.getQuantity(),
+                            order.getOrderCode()
+                    );
+
+                    ResponseEntity<InventoryClient.StockOperationResponse> releaseResponse =
+                            inventoryClient.releaseStock(item.getProductId(), releaseRequest);
+
+                    if (releaseResponse.getStatusCode().is2xxSuccessful()) {
+                        log.info("Successfully released stock for productId={}, quantity={}",
+                                item.getProductId(), item.getQuantity());
+                    } else {
+                        log.warn("Failed to release stock for productId={}", item.getProductId());
+                    }
+                } catch (FeignException e) {
+                    log.error("Error releasing stock for productId={}: {}",
+                            item.getProductId(), e.getMessage());
+                }
+            }
+        }
+        
         return orderRepository.save(order);
     }
 
+    @Transactional
     public Order markAsPaid(Long id) {
         Order order = getById(id);
         order.setPaymentStatus(Order.PaymentStatus.PAID);
         order.setStatus(Order.OrderStatus.CONFIRMED);
         log.info("Order {} marked as PAID", id);
+        
+        // NOTE: Không COMMIT ở đây, sẽ COMMIT khi DELIVERED
+        // Vì hàng chỉ xuất kho thực tế khi giao hàng thành công
+        
         return orderRepository.save(order);
     }
 
