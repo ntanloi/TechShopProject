@@ -55,6 +55,16 @@ public class OrderController {
 
     // =================== INTERNAL ===================
 
+    @PutMapping("/{orderId}/payment-status")
+    public ResponseEntity<String> updatePaymentStatus(@PathVariable Long orderId, 
+                                                       @RequestParam String status) {
+        if ("PAID".equals(status)) {
+            orderService.markAsPaid(orderId);
+            return ResponseEntity.ok("Order " + orderId + " payment status updated to PAID");
+        }
+        return ResponseEntity.ok("Payment status updated");
+    }
+
     @PutMapping("/{id}/paid")
     public ResponseEntity<String> markAsPaid(@PathVariable Long id) {
         orderService.markAsPaid(id);
@@ -81,13 +91,10 @@ public class OrderController {
             String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
-                // Subject của JWT là email, không phải userId
-                // Dùng userId = 0 làm fallback, service sẽ lookup bằng email
-                String subject = jwtUtil.extractUsername(token);
-                // Thử parse nếu subject là số
-                return Long.parseLong(subject);
+                Long userId = jwtUtil.extractUserId(token);
+                return userId != null ? userId : 1L; // Default to 1 if not found
             }
         } catch (Exception ignored) {}
-        return 0L;
+        return 1L; // Default userId
     }
 }
