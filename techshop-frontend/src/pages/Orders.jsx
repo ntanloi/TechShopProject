@@ -20,9 +20,35 @@ export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  console.log("Orders component rendered, user:", user); // Debug log
+
   useEffect(() => {
-    if (!user) { nav("/login"); return; }
-    orderApi.getMyOrders().then((r) => setOrders(r.data?.content || [])).catch(() => {}).finally(() => setLoading(false));
+    console.log("useEffect triggered, user:", user); // Debug log
+    
+    if (!user) { 
+      console.log("No user, redirecting to login"); // Debug log
+      nav("/login"); 
+      return; 
+    }
+    
+    console.log("Calling orderApi.getMyOrders..."); // Debug log
+    
+    // Truyền size=100 để lấy nhiều orders
+    orderApi.getMyOrders({ page: 0, size: 100 })
+      .then((r) => {
+        console.log("Orders API response:", r.data); // Debug log
+        console.log("Total orders:", r.data?.totalElements); // Debug log
+        console.log("Orders content:", r.data?.content); // Debug log
+        setOrders(r.data?.content || []);
+      })
+      .catch((err) => {
+        console.error("Orders API error:", err); // Debug log
+        console.error("Error details:", err.response); // Debug log
+      })
+      .finally(() => {
+        console.log("API call finished"); // Debug log
+        setLoading(false);
+      });
   }, [user]);
 
   if (loading) return (

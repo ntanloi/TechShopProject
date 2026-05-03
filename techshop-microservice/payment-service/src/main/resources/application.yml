@@ -35,7 +35,11 @@ management:
 
 # VNPay config
 vnpay:
-  tmn-code: ${VNPAY_TMN_CODE:your-tmn-code}
-  hash-secret: ${VNPAY_HASH_SECRET:your-hash-secret}
-  url: ${VNPAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
-  return-url: ${VNPAY_RETURN_URL:http://localhost:8080/api/payments/vnpay-return}
+  tmn-code: NWC83CLJ
+  hash-secret: Z1T4ELP019FXYP8F1T7WINQVY5BHJC4V
+  pay-url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+  return-url: http://localhost:5173/payment-result
+  api-url: https://sandbox.vnpayment.vn/merchant_webapi/api/transaction
+  version: 2.1.0
+  command: pay
+  order-type: other
