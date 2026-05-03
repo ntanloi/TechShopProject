@@ -32,8 +32,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getServletPath();
+        String method = request.getMethod();
 
-        if (isPublicPath(path) || "OPTIONS".equalsIgnoreCase(request.getMethod())) {
+        // Skip OPTIONS requests
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // Skip public GET endpoints
+        if (isPublicGetPath(path, method)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -68,10 +76,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private boolean isPublicPath(String path) {
-        return path.startsWith("/products")
-                || path.startsWith("/categories")
-                || path.startsWith("/actuator")
+    private boolean isPublicGetPath(String path, String method) {
+        // Only GET requests to products and categories are public
+        if ("GET".equalsIgnoreCase(method)) {
+            return path.startsWith("/products")
+                    || path.startsWith("/categories");
+        }
+        
+        // These paths are always public
+        return path.startsWith("/actuator")
                 || path.startsWith("/v3/api-docs")
                 || path.startsWith("/swagger-ui")
                 || path.equals("/error");
