@@ -1,12 +1,15 @@
 package com.techshop.productservice.service;
 
+import com.techshop.common.service.CloudinaryService;
 import com.techshop.productservice.model.Category;
 import com.techshop.productservice.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.List;
 
 @Service
@@ -14,6 +17,7 @@ import java.util.List;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final CloudinaryService cloudinaryService;
 
     public List<Category> getAll() {
         return categoryRepository.findAll();
@@ -64,5 +68,9 @@ public class CategoryService {
         }
         
         categoryRepository.deleteById(id);
+    }
+
+    public String uploadImage(MultipartFile file) throws IOException {
+        return cloudinaryService.uploadImage(file, "categories");
     }
 }

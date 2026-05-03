@@ -102,17 +102,33 @@ export default function AdminCategories() {
           const formData = new FormData();
           formData.append("file", imageFile);
 
-          // Import productApi to use upload endpoint
-          const productApi = (await import("../../api/productApi")).default;
-          const uploadRes = await productApi.uploadImage(formData);
+          console.log("=== UPLOAD DEBUG ===");
+          console.log("File:", imageFile);
+          console.log("Token:", localStorage.getItem("token") ? "exists" : "missing");
+          console.log("FormData:", formData);
+
+          const uploadRes = await categoryApi.uploadImage(formData);
           imageUrl = uploadRes.data;
           toast.success("Đã upload ảnh thành công!");
           setUploading(false);
         } catch (uploadErr) {
           setUploading(false);
+          console.error("=== UPLOAD ERROR ===");
           console.error("Upload failed:", uploadErr);
+          console.error("Upload error response:", uploadErr.response);
+          console.error("Upload error status:", uploadErr.response?.status);
+          console.error("Upload error data:", uploadErr.response?.data);
+          console.error("Upload error headers:", uploadErr.response?.headers);
 
           const errorMsg = uploadErr.response?.data || uploadErr.message || "";
+          
+          // Check for authentication errors
+          if (uploadErr.response?.status === 401 || uploadErr.response?.status === 403) {
+            toast.error("Bạn không có quyền upload ảnh! Vui lòng đăng nhập với tài khoản ADMIN.");
+            imageUrl = "";
+            return;
+          }
+          
           if (
             errorMsg.includes("disabled") ||
             errorMsg.includes("Cloudinary")
@@ -121,7 +137,7 @@ export default function AdminCategories() {
               "Cloudinary chưa được cấu hình. Lưu danh mục không có ảnh.",
             );
           } else {
-            toast.warning("Không thể upload ảnh. Lưu danh mục không có ảnh.");
+            toast.warning(`Không thể upload ảnh: ${errorMsg}. Lưu danh mục không có ảnh.`);
           }
           imageUrl = "";
         }
