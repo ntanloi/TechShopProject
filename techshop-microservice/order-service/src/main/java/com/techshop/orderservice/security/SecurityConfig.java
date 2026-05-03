@@ -27,6 +27,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/error").permitAll()
+                        // Internal endpoints (called by other services)
+                        .requestMatchers(HttpMethod.PUT, "/orders/*/payment-status").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/orders/*/paid").permitAll()
+                        // Admin endpoints
                         .requestMatchers("/orders/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
