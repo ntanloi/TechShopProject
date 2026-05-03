@@ -17,6 +17,7 @@ export const API_ROUTES = {
     create: "/api/products",
     update: (id) => `/api/products/${id}`,
     delete: (id) => `/api/products/${id}`,
+    uploadImage: "/api/products/upload-image",
   },
   categories: {
     list: "/api/categories",

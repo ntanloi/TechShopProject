@@ -19,7 +19,9 @@ public class ProductRequest {
     @Positive(message = "Giá phải lớn hơn 0")
     private BigDecimal price;
 
+    @Positive(message = "Giá khuyến mãi phải lớn hơn 0")
     private BigDecimal salePrice;
+    
     private String imageUrl;
     private String brand;
     private String sku;
