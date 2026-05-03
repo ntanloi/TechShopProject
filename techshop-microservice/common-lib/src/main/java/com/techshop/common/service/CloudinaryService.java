@@ -25,6 +25,11 @@ public class CloudinaryService {
      * All images will be uploaded to: Home/techshop/
      */
     public String uploadImage(MultipartFile file, String folder) throws IOException {
+        log.info("=== CLOUDINARY UPLOAD START ===");
+        log.info("File name: {}", file.getOriginalFilename());
+        log.info("File size: {} bytes", file.getSize());
+        log.info("Content type: {}", file.getContentType());
+        
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File không được để trống");
         }
@@ -41,24 +46,26 @@ public class CloudinaryService {
         }
 
         try {
+            log.info("Uploading to Cloudinary folder: techshop");
             Map<String, Object> uploadResult = cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
-                            "folder", "techshop",  // All images go to Home/techshop/
-                            "resource_type", "image",
-                            "transformation", ObjectUtils.asMap(
-                                    "quality", "auto",
-                                    "fetch_format", "auto"
-                            )
+                            "folder", "techshop",
+                            "resource_type", "image"
                     )
             );
 
             String imageUrl = (String) uploadResult.get("secure_url");
-            log.info("Image uploaded successfully: {}", imageUrl);
+            String publicId = (String) uploadResult.get("public_id");
+            log.info("=== CLOUDINARY UPLOAD SUCCESS ===");
+            log.info("Image URL: {}", imageUrl);
+            log.info("Public ID: {}", publicId);
             return imageUrl;
 
         } catch (IOException e) {
-            log.error("Failed to upload image to Cloudinary", e);
+            log.error("=== CLOUDINARY UPLOAD FAILED ===");
+            log.error("Error message: {}", e.getMessage());
+            log.error("Error details: ", e);
             throw new IOException("Không thể upload ảnh: " + e.getMessage());
         }
     }

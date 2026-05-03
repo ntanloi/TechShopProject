@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -40,5 +41,16 @@ public class CategoryController {
     public ResponseEntity<String> delete(@PathVariable Long id) {
         categoryService.delete(id);
         return ResponseEntity.ok("Đã xóa danh mục id=" + id);
+    }
+
+    @PostMapping("/upload-image")
+    public ResponseEntity<String> uploadImage(@RequestParam("file") MultipartFile file) {
+        try {
+            String imageUrl = categoryService.uploadImage(file);
+            return ResponseEntity.ok(imageUrl);
+        } catch (Exception e) {
+            e.printStackTrace(); // Print full stack trace
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Upload failed: " + e.getMessage());
+        }
     }
 }
