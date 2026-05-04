@@ -4,9 +4,11 @@ import useCartStore from "../store/cartStore";
 import { useState, useEffect } from "react";
 import {
   ShoppingCart, User, Menu, X, Search, Zap,
-  LogOut, Package, Heart, Settings, ChevronDown
+  LogOut, Package, Heart, Settings, ChevronDown, Bell, Check
 } from "lucide-react";
 import { toast } from "react-toastify";
+import useNotificationStore from "../store/notificationStore";
+import NotificationBell from "./NotificationBell";
 
 export default function NavBar() {
   const [open, setOpen] = useState(false);
@@ -93,6 +95,9 @@ export default function NavBar() {
               </span>
             )}
           </Link>
+
+          {/* Notifications */}
+          <NotificationBell />
 
           {/* User */}
           {!user ? (

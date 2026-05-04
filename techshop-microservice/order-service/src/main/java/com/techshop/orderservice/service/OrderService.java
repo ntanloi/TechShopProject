@@ -268,6 +268,18 @@ public class OrderService {
         // Gửi email xác nhận đơn hàng (Async-like via try-catch)
         sendOrderConfirmationEmail(order);
 
+        // Gửi thông báo In-app
+        try {
+            notificationClient.sendInAppNotification(
+                    order.getUserId(),
+                    "Đặt hàng thành công",
+                    "Đơn hàng #" + order.getOrderCode() + " đã được tạo thành công. Cảm ơn bạn!",
+                    "ORDER_CONFIRMATION"
+            );
+        } catch (Exception e) {
+            log.warn("Không thể gửi thông báo In-app: {}", e.getMessage());
+        }
+
         // TỰ ĐỘNG TẠO PAYMENT (chỉ cho phương thức online, không phải COD)
         // COD sẽ thanh toán khi nhận hàng, không cần tạo payment ngay
         if (request.getPaymentMethod() != Order.PaymentMethod.COD) {
@@ -399,6 +411,9 @@ public class OrderService {
         // NOTE: Không COMMIT ở đây, sẽ COMMIT khi DELIVERED
         // Vì hàng chỉ xuất kho thực tế khi giao hàng thành công
         
+        // Gửi email xác nhận thanh toán thành công
+        sendPaymentSuccessEmail(order);
+        
         return orderRepository.save(order);
     }
 
@@ -503,6 +518,24 @@ public class OrderService {
             notificationClient.sendOrderDeliveredEmail(emailRequest);
         } catch (Exception e) {
             log.error("Failed to send order delivered email for {}: {}", 
+                    order.getOrderCode(), e.getMessage());
+        }
+    }
+
+    private void sendPaymentSuccessEmail(Order order) {
+        try {
+            OrderConfirmEmailRequest emailRequest = OrderConfirmEmailRequest.builder()
+                    .orderId(order.getId())
+                    .email(order.getUserEmail())
+                    .customerName(order.getReceiverName())
+                    .orderCode(order.getOrderCode())
+                    .totalAmount(order.getTotalAmount())
+                    .build();
+            
+            log.info("Sending payment success email for order: {}", order.getOrderCode());
+            notificationClient.sendPaymentSuccessEmail(emailRequest);
+        } catch (Exception e) {
+            log.error("Failed to send payment success email for {}: {}", 
                     order.getOrderCode(), e.getMessage());
         }
     }
