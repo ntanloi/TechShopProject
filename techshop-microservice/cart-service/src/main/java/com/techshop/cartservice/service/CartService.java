@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -19,6 +20,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional
 public class CartService {
 
     private final CartItemRepository cartItemRepository;
@@ -31,6 +33,32 @@ public class CartService {
 
     public Map<String, Object> getCartSummary(Long userId) {
         List<CartItem> items = getCart(userId);
+        
+        // Lấy thông tin tồn kho thực tế cho từng sản phẩm trong giỏ hàng
+        items.forEach(item -> {
+            try {
+                // Gọi sang inventory-service để lấy số lượng tồn kho hiện tại
+                Map<String, Object> stockInfo = inventoryClient.checkStock(item.getProductId(), 1);
+                
+                // Nếu service trả về số lượng, gán vào field transient để hiển thị ở frontend
+                if (stockInfo != null) {
+                    log.info("StockInfo received for product {}: {}", item.getProductId(), stockInfo);
+                    
+                    if (stockInfo.containsKey("availableStock")) {
+                        Object stockVal = stockInfo.get("availableStock");
+                        item.setAvailableStock(stockVal instanceof Number ? ((Number) stockVal).intValue() : 0);
+                    }
+                    
+                    // Lấy ngưỡng cảnh báo từ inventory-service, mặc định là 5 nếu thiếu key
+                    Object thresholdVal = stockInfo.getOrDefault("lowStockThreshold", 5);
+                    item.setLowStockThreshold(thresholdVal instanceof Number ? ((Number) thresholdVal).intValue() : 5);
+                }
+            } catch (Exception e) {
+                log.error("Lỗi khi lấy thông tin tồn kho cho sản phẩm {}: {}", item.getProductId(), e.getMessage());
+                item.setAvailableStock(0); // Mặc định là 0 nếu không lấy được thông tin
+            }
+        });
+
         BigDecimal total = items.stream()
                 .map(CartItem::getSubtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -38,6 +66,10 @@ public class CartService {
         result.put("items", items);
         result.put("totalItems", items.size());
         result.put("totalAmount", total);
+        
+        log.info("Returning cart summary for user {}: {} items", userId, items.size());
+        items.forEach(i -> log.info("Item {}: stock={}, threshold={}", i.getProductName(), i.getAvailableStock(), i.getLowStockThreshold()));
+        
         return result;
     }
 
@@ -103,6 +135,34 @@ public class CartService {
         if (quantity <= 0) {
             cartItemRepository.delete(item);
             throw new ResponseStatusException(HttpStatus.NO_CONTENT, "Item removed");
+        }
+
+        // Kiểm tra tồn kho khi tăng số lượng
+        try {
+            Map<String, Object> stockCheck = inventoryClient.checkStock(item.getProductId(), quantity);
+            boolean available = Boolean.TRUE.equals(stockCheck.get("available"));
+            if (!available) {
+                Object availStock = stockCheck.get("availableStock");
+                int maxPossible = availStock instanceof Number ? ((Number) availStock).intValue() : 0;
+                
+                if (maxPossible > 0) {
+                    item.setQuantity(maxPossible);
+                    cartItemRepository.save(item);
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                        "Số lượng tồn kho không đủ.");
+                } else {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm hiện tại đã hết hàng");
+                }
+            }
+        } catch (FeignException e) {
+            log.error("Lỗi kiểm tra kho khi cập nhật số lượng: {}", e.getMessage());
+            if (e.status() == 503 || e.status() == -1) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, 
+                    "Dịch vụ kiểm tra kho hiện không khả dụng. Vui lòng kiểm tra lại inventory-service.");
+            }
+            if (e.status() == 404) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm chưa có thông tin tồn kho");
+            }
         }
 
         item.setQuantity(quantity);
