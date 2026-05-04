@@ -19,14 +19,17 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USERNAME:your-email@gmail.com}
-    password: ${MAIL_PASSWORD:your-app-password}
+    username: ${MAIL_USERNAME:tcminhangiang@gmail.com}
+    password: ${MAIL_PASSWORD:iipx bevp sshi lbgf}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -46,6 +49,9 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    mail:
+      enabled: false
 
 jwt:
   secret: ${JWT_SECRET:techshop-super-secret-key-change-in-production-2024}

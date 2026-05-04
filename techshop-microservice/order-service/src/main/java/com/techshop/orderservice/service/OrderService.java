@@ -1,10 +1,9 @@
 package com.techshop.orderservice.service;
 
 import com.techshop.orderservice.client.InventoryClient;
+import com.techshop.orderservice.client.NotificationClient;
 import com.techshop.orderservice.client.PaymentClient;
-import com.techshop.orderservice.dto.CreateOrderRequest;
-import com.techshop.orderservice.dto.CreatePaymentRequest;
-import com.techshop.orderservice.dto.PaymentResponse;
+import com.techshop.orderservice.dto.*;
 import com.techshop.orderservice.model.Order;
 import com.techshop.orderservice.model.OrderItem;
 import com.techshop.orderservice.repository.OrderRepository;
@@ -36,6 +35,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final InventoryClient inventoryClient;
     private final PaymentClient paymentClient;
+    private final NotificationClient notificationClient;
 
     @Value("${payment.return-url:http://localhost:3000/payment-success}")
     private String paymentReturnUrl;
@@ -265,6 +265,9 @@ public class OrderService {
         log.info("Order {} created successfully with {} items", order.getOrderCode(), order.getItems().size());
         order = orderRepository.save(order);
 
+        // Gửi email xác nhận đơn hàng (Async-like via try-catch)
+        sendOrderConfirmationEmail(order);
+
         // TỰ ĐỘNG TẠO PAYMENT (chỉ cho phương thức online, không phải COD)
         // COD sẽ thanh toán khi nhận hàng, không cần tạo payment ngay
         if (request.getPaymentMethod() != Order.PaymentMethod.COD) {
@@ -312,6 +315,9 @@ public class OrderService {
         
         order.setStatus(status);
         log.info("Order {} status updated from {} to {}", id, oldStatus, status);
+        
+        // Gửi thông báo In-app khi có thay đổi trạng thái quan trọng
+        sendStatusNotification(order, status);
         
         // ─────────────────────────────────────────────
         // COMMIT stock khi đơn hàng chuyển sang DELIVERED
@@ -371,6 +377,13 @@ public class OrderService {
                             item.getProductId(), e.getMessage());
                 }
             }
+            // Gửi email thông báo hủy đơn từ Admin
+            sendOrderCancelEmail(order);
+        }
+
+        if (status == Order.OrderStatus.DELIVERED) {
+            // Gửi email thông báo giao hàng thành công
+            sendOrderDeliveredEmail(order);
         }
         
         return orderRepository.save(order);
@@ -430,6 +443,85 @@ public class OrderService {
         }
 
         order.setStatus(Order.OrderStatus.CANCELLED);
-        return orderRepository.save(order);
+        order = orderRepository.save(order);
+        
+        // Gửi email thông báo hủy đơn từ người dùng
+        sendOrderCancelEmail(order);
+        
+        return order;
+    }
+
+    private void sendOrderConfirmationEmail(Order order) {
+        try {
+            OrderConfirmEmailRequest emailRequest = OrderConfirmEmailRequest.builder()
+                    .orderId(order.getId())
+                    .email(order.getUserEmail())
+                    .customerName(order.getReceiverName())
+                    .orderCode(order.getOrderCode())
+                    .totalAmount(order.getTotalAmount())
+                    .shippingAddress(order.getShippingAddress())
+                    .paymentMethod(order.getPaymentMethod().name())
+                    .build();
+            
+            log.info("Sending order confirmation email for order: {}", order.getOrderCode());
+            log.info("Sending order confirmation email: orderId={}, orderCode={}", emailRequest.getOrderId(), emailRequest.getOrderCode());
+            notificationClient.sendOrderConfirmEmail(emailRequest);
+        } catch (Exception e) {
+            log.error("Failed to send order confirmation email for {}: {}", 
+                    order.getOrderCode(), e.getMessage());
+        }
+    }
+
+    private void sendOrderCancelEmail(Order order) {
+        try {
+            OrderConfirmEmailRequest emailRequest = OrderConfirmEmailRequest.builder()
+                    .orderId(order.getId())
+                    .email(order.getUserEmail())
+                    .customerName(order.getReceiverName())
+                    .orderCode(order.getOrderCode())
+                    .totalAmount(order.getTotalAmount())
+                    .build();
+            
+            log.info("Sending order cancellation email for order: {}", order.getOrderCode());
+            notificationClient.sendOrderCancelEmail(emailRequest);
+        } catch (Exception e) {
+            log.error("Failed to send order cancellation email for {}: {}", 
+                    order.getOrderCode(), e.getMessage());
+        }
+    }
+
+    private void sendOrderDeliveredEmail(Order order) {
+        try {
+            OrderConfirmEmailRequest emailRequest = OrderConfirmEmailRequest.builder()
+                    .orderId(order.getId())
+                    .email(order.getUserEmail())
+                    .customerName(order.getReceiverName())
+                    .orderCode(order.getOrderCode())
+                    .build();
+            
+            log.info("Sending order delivered email for order: {}", order.getOrderCode());
+            notificationClient.sendOrderDeliveredEmail(emailRequest);
+        } catch (Exception e) {
+            log.error("Failed to send order delivered email for {}: {}", 
+                    order.getOrderCode(), e.getMessage());
+        }
+    }
+
+    private void sendStatusNotification(Order order, Order.OrderStatus status) {
+        try {
+            String title = "Cập nhật đơn hàng " + order.getOrderCode();
+            String message = String.format("Đơn hàng của bạn đã chuyển sang trạng thái: %s", status.name());
+            
+            log.info("Sending in-app notification for order: {} status: {}", order.getOrderCode(), status);
+            notificationClient.sendInAppNotification(
+                    order.getUserId(),
+                    title,
+                    message,
+                    "ORDER_STATUS"
+            );
+        } catch (Exception e) {
+            log.error("Failed to send in-app notification for order {}: {}", 
+                    order.getOrderCode(), e.getMessage());
+        }
     }
 }
