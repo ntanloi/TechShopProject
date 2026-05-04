@@ -1,5 +1,6 @@
 package com.techshop.cartservice.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -35,6 +36,14 @@ public class CartItem {
     private Integer quantity;
 
     private LocalDateTime addedAt;
+
+    @Transient
+    @JsonProperty("availableStock")
+    private Integer availableStock;
+
+    @Transient
+    @JsonProperty("lowStockThreshold")
+    private Integer lowStockThreshold;
 
     @PrePersist
     protected void onCreate() {
