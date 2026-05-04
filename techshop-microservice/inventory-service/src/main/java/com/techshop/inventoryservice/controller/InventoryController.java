@@ -66,6 +66,7 @@ public class InventoryController {
             body.put("availableStock", inv.getAvailableQuantity());
             body.put("totalStock", inv.getQuantity());
             body.put("reservedStock", inv.getReservedQuantity());
+            body.put("lowStockThreshold", inv.getLowStockThreshold());
             return ResponseEntity.ok(body);
         }).orElse(ResponseEntity.notFound().build());
     }
