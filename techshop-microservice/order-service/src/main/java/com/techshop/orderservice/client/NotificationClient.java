@@ -18,6 +18,9 @@ public interface NotificationClient {
 
     @PostMapping("/email/order-delivered")
     ResponseEntity<String> sendOrderDeliveredEmail(@RequestBody OrderConfirmEmailRequest request);
+    
+    @PostMapping("/email/payment-success")
+    ResponseEntity<String> sendPaymentSuccessEmail(@RequestBody OrderConfirmEmailRequest request);
 
     @PostMapping("/send")
     ResponseEntity<Object> sendInAppNotification(@RequestParam("userId") Long userId,

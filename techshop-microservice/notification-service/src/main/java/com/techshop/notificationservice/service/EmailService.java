@@ -195,4 +195,48 @@ public class EmailService {
         );
         sendHtmlEmail(request.getEmail(), subject, htmlBody);
     }
+
+    @Async
+    public void sendPaymentSuccessEmail(OrderConfirmEmailRequest request) {
+        String subject = "[TechShop] Xác nhận thanh toán thành công cho đơn hàng #" + request.getOrderCode();
+        String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        
+        String htmlBody = String.format("""
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
+                <div style="background: linear-gradient(135deg, #28a745, #218838); padding: 30px; text-align: center; color: white;">
+                    <h1 style="margin: 0; font-size: 28px;">Thanh toán thành công!</h1>
+                    <p style="margin: 10px 0 0;">Giao dịch của bạn đã được xác nhận</p>
+                </div>
+                <div style="padding: 20px;">
+                    <p>Xin chào <strong>%s</strong>,</p>
+                    <p>TechShop xác nhận đã nhận được thanh toán cho đơn hàng <strong style="color: #218838;">#%s</strong>.</p>
+                    
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+                        <p style="margin: 5px 0;"><strong>Mã đơn hàng:</strong> %s</p>
+                        <p style="margin: 5px 0;"><strong>Số tiền đã thanh toán:</strong> <span style="color: #218838; font-weight: bold;">%,.0f VNĐ</span></p>
+                        <p style="margin: 5px 0;"><strong>Thời gian:</strong> %s</p>
+                        <p style="margin: 5px 0;"><strong>Trạng thái:</strong> <span style="color: #218838;">Đã thanh toán</span></p>
+                    </div>
+
+                    <p>Chúng tôi đang tiến hành chuẩn bị hàng và sẽ thông báo cho bạn ngay khi hàng được gửi đi.</p>
+
+                    <div style="text-align: center; margin-top: 30px;">
+                        <a href="http://localhost:5173/orders/%s" style="background: #28a745; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Xem chi tiết đơn hàng</a>
+                    </div>
+                </div>
+                <div style="background: #f1f1f1; padding: 15px; text-align: center; font-size: 12px; color: #888;">
+                    <p style="margin: 5px 0;">Cảm ơn bạn đã tin dùng TechShop.</p>
+                    <p style="margin: 5px 0;">&copy; 2024 TechShop - All Rights Reserved</p>
+                </div>
+            </div>
+            """,
+                request.getCustomerName(),
+                request.getOrderCode(),
+                request.getOrderCode(),
+                request.getTotalAmount(),
+                dateStr,
+                request.getOrderId()
+        );
+        sendHtmlEmail(request.getEmail(), subject, htmlBody);
+    }
 }

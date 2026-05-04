@@ -60,6 +60,18 @@ public class NotificationController {
         }
     }
 
+    @PostMapping("/email/payment-success")
+    public ResponseEntity<String> sendPaymentSuccessEmail(@RequestBody OrderConfirmEmailRequest request) {
+        log.info("Received payment success email request: orderId={}, email={}", request.getOrderId(), request.getEmail());
+        try {
+            emailService.sendPaymentSuccessEmail(request);
+            return ResponseEntity.ok("Email xác nhận thanh toán thành công đã được gửi");
+        } catch (Exception e) {
+            log.error("Error sending payment success email: {}", e.getMessage());
+            return ResponseEntity.status(500).body("Lỗi gửi email: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<Notification>> getByUser(@PathVariable Long userId) {
         return ResponseEntity.ok(notificationService.getByUserId(userId));

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "react-toastify";
+import NotificationBell from "../components/NotificationBell";
 
 const NAV = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -75,12 +76,12 @@ export default function AdminLayout() {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Desktop sidebar */}
+      {/* Sidebar cho Desktop */}
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-gray-200 shrink-0">
         <Sidebar />
       </aside>
 
-      {/* Mobile sidebar */}
+      {/* Sidebar cho Mobile */}
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="w-64 bg-white border-r border-gray-200 flex flex-col"><Sidebar /></div>
@@ -88,15 +89,27 @@ export default function AdminLayout() {
         </div>
       )}
 
-      {/* Main */}
+      {/* Nội dung chính */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between lg:hidden">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 text-gray-600 hover:text-gray-900">
-            <Menu className="h-6 w-6" />
-          </button>
-          <span className="font-bold text-gray-900">Admin Panel</span>
-          <div />
+        {/* Thanh tiêu đề (Header) */}
+        <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 text-gray-600 hover:text-gray-900">
+              <Menu className="h-6 w-6" />
+            </button>
+            <h1 className="font-bold text-lg text-gray-800 hidden md:block">Quản trị TechShop</h1>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <NotificationBell />
+            <div className="h-6 w-[1px] bg-gray-200 hidden md:block"></div>
+            <div className="hidden md:flex items-center gap-2">
+               <span className="text-sm font-medium text-gray-700">{user?.fullName}</span>
+               <span className="px-2 py-0.5 bg-orange-100 text-orange-600 text-[10px] font-bold rounded-full">{user?.role}</span>
+            </div>
+          </div>
         </header>
+
         <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
