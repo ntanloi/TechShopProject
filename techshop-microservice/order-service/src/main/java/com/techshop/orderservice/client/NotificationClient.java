@@ -13,6 +13,12 @@ public interface NotificationClient {
     @PostMapping("/email/order-confirm")
     ResponseEntity<String> sendOrderConfirmEmail(@RequestBody OrderConfirmEmailRequest request);
 
+    @PostMapping("/email/order-cancel")
+    ResponseEntity<String> sendOrderCancelEmail(@RequestBody OrderConfirmEmailRequest request);
+
+    @PostMapping("/email/order-delivered")
+    ResponseEntity<String> sendOrderDeliveredEmail(@RequestBody OrderConfirmEmailRequest request);
+
     @PostMapping("/send")
     ResponseEntity<Object> sendInAppNotification(@RequestParam("userId") Long userId,
                                                  @RequestParam("title") String title,

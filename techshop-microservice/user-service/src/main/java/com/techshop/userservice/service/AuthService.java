@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import com.techshop.userservice.client.NotificationClient;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +23,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final NotificationClient notificationClient;
 
     public AuthResponse register(RegisterRequest request) {
         log.info("Register request: {}", request.getEmail());
@@ -39,8 +41,16 @@ public class AuthService {
                 .role(Role.CUSTOMER)
                 .build();
 
-        userRepository.save(user);
+        user = userRepository.save(user);
         log.info("User registered: {}", user.getEmail());
+
+        // Gửi email chào mừng (Async-like via try-catch)
+        try {
+            log.info("Sending welcome email to: {}", user.getEmail());
+            notificationClient.sendWelcomeEmail(user.getEmail(), user.getFullName());
+        } catch (Exception e) {
+            log.error("Failed to send welcome email for {}: {}", user.getEmail(), e.getMessage());
+        }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name(), user.getId());
 
