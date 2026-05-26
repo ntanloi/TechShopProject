@@ -1,0 +1,233 @@
+# Docker Compose Scale Configuration
+# Implements Scalability requirement
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.scale.yml up -d --scale product-service=3
+
+services:
+  # ==========================================
+  # SCALABLE MICROSERVICES
+  # ==========================================
+  
+  # Product Service - Can scale horizontally
+  product-service:
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+    # Remove container_name to allow multiple instances
+    container_name: null
+    ports:
+      - "8082" # Dynamic port mapping
+
+  # User Service - Can scale horizontally
+  user-service:
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    container_name: null
+    ports:
+      - "8081"
+
+  # Order Service - Can scale horizontally
+  order-service:
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    container_name: null
+    ports:
+      - "8083"
+
+  # Cart Service - Can scale horizontally
+  cart-service:
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    container_name: null
+    ports:
+      - "8084"
+
+  # Inventory Service - Can scale horizontally
+  inventory-service:
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    container_name: null
+    ports:
+      - "8085"
+
+  # Payment Service - Can scale horizontally
+  payment-service:
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    container_name: null
+    ports:
+      - "8086"
+
+  # Review Service - Can scale horizontally
+  review-service:
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    container_name: null
+    ports:
+      - "8088"
+
+  # Notification Service - Can scale horizontally
+  notification-service:
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    container_name: null
+    ports:
+      - "8087"
+
+  # ==========================================
+  # GATEWAY - Load Balancer
+  # ==========================================
+  
+  gateway-service:
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    container_name: null
+    ports:
+      - "8080" # Dynamic port, use load balancer in front
+
+  # ==========================================
+  # LOAD BALANCER (NGINX)
+  # ==========================================
+  
+  nginx-lb:
+    image: nginx:alpine
+    container_name: techshop-nginx-lb
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - techshop-network
+    depends_on:
+      - gateway-service
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+networks:
+  techshop-network:
+    driver: bridge
+
+volumes:
+  mysql-user-data:
+  mysql-product-data:
+  mysql-order-data:
+  mysql-cart-data:
+  mysql-payment-data:
+  mysql-notification-data:
+  mysql-inventory-data:
+  mysql-review-data:
+  redis-data:

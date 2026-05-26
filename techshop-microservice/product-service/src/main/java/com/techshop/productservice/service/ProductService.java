@@ -8,6 +8,9 @@ import com.techshop.productservice.repository.CategoryRepository;
 import com.techshop.productservice.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -27,24 +30,39 @@ public class ProductService {
     private final CloudinaryService cloudinaryService;
 
     public Page<Product> getAll(Pageable pageable) {
+        log.info("Fetching all products from database (not cached - pagination)");
         return productRepository.findByActiveTrue(pageable);
     }
 
     public Page<Product> getByCategory(Long categoryId, Pageable pageable) {
+        log.info("Fetching products by category {} from database (not cached - pagination)", categoryId);
         return productRepository.findByCategoryIdAndActiveTrue(categoryId, pageable);
     }
 
     public Page<Product> search(String keyword, Pageable pageable) {
+        log.info("Searching products with keyword '{}' from database (not cached - pagination)", keyword);
         return productRepository.searchByKeyword(keyword, pageable);
     }
 
+    /**
+     * Get product by ID with Redis caching
+     * Cache name: "products", Key: product ID
+     * TTL: 10 minutes (configured in RedisConfig)
+     */
+    @Cacheable(value = "products", key = "#id")
     public Product getById(Long id) {
+        log.info("Cache MISS - Fetching product {} from database", id);
         return productRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Không tìm thấy sản phẩm id=" + id));
     }
 
+    /**
+     * Create product and evict all products cache
+     */
+    @CacheEvict(value = "products", allEntries = true)
     public Product create(ProductRequest request) {
+        log.info("Creating new product and clearing cache");
         // Validate price > 0
         if (request.getPrice() == null || request.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá phải lớn hơn 0");
@@ -94,8 +112,15 @@ public class ProductService {
         return productRepository.save(product);
     }
 
+    /**
+     * Update product and update cache
+     */
+    @CachePut(value = "products", key = "#id")
     public Product update(Long id, ProductRequest request) {
-        Product product = getById(id);
+        log.info("Updating product {} and refreshing cache", id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy sản phẩm id=" + id));
 
         // Validate price > 0
         if (request.getPrice() == null || request.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
@@ -142,8 +167,15 @@ public class ProductService {
         return productRepository.save(product);
     }
 
+    /**
+     * Delete product and evict from cache
+     */
+    @CacheEvict(value = "products", key = "#id")
     public void delete(Long id) {
-        Product product = getById(id);
+        log.info("Deleting product {} and removing from cache", id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy sản phẩm id=" + id));
         product.setActive(false);
         productRepository.save(product);
         log.info("Product {} soft-deleted", id);
