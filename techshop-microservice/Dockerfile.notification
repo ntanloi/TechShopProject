@@ -10,17 +10,17 @@ RUN mvn -B -f common-lib/pom.xml clean install -DskipTests \
     -Dmaven.wagon.http.retryHandler.count=5 \
     -Dmaven.wagon.httpconnectionManager.ttlSeconds=120
 
-# Then build product-service
-COPY product-service/pom.xml product-service/pom.xml
-COPY product-service/src product-service/src
-RUN mvn -B -f product-service/pom.xml clean package -DskipTests \
+# Then build notification-service
+COPY notification-service/pom.xml notification-service/pom.xml
+COPY notification-service/src notification-service/src
+RUN mvn -B -f notification-service/pom.xml clean package -DskipTests \
     -Dmaven.wagon.http.retryHandler.count=5 \
     -Dmaven.wagon.httpconnectionManager.ttlSeconds=120
 
 FROM eclipse-temurin:21-jre-jammy
 ENV TZ=Asia/Ho_Chi_Minh
 WORKDIR /app
-COPY --from=builder /app/product-service/target/*.jar app.jar
+COPY --from=builder /app/notification-service/target/*.jar app.jar
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:+UseG1GC"
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar --spring.profiles.active=docker"]
-EXPOSE 8082
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+EXPOSE 8086
