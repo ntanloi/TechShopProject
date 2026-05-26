@@ -1,0 +1,256 @@
+# GitLab CI/CD Pipeline for TechShop Microservices
+# Implements DevOps requirement: Gitlab CI/CD (Jenkins)
+
+stages:
+  - build
+  - test
+  - docker-build
+  - deploy
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+# Cache Maven dependencies
+cache:
+  paths:
+    - .m2/repository
+    - techshop-frontend/node_modules
+
+# ==========================================
+# BUILD STAGE
+# ==========================================
+
+build:common-lib:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - echo "Building common-lib..."
+    - cd techshop-microservice/common-lib
+    - mvn clean install -DskipTests
+  artifacts:
+    paths:
+      - techshop-microservice/common-lib/target/*.jar
+    expire_in: 1 hour
+  only:
+    - main
+    - develop
+    - merge_requests
+
+build:discovery-service:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  needs: ["build:common-lib"]
+  script:
+    - echo "Building discovery-service..."
+    - cd techshop-microservice/discovery-service
+    - mvn clean package -DskipTests
+  artifacts:
+    paths:
+      - techshop-microservice/discovery-service/target/*.jar
+    expire_in: 1 hour
+  only:
+    - main
+    - develop
+    - merge_requests
+
+build:gateway-service:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  needs: ["build:common-lib"]
+  script:
+    - echo "Building gateway-service..."
+    - cd techshop-microservice/gateway-service
+    - mvn clean package -DskipTests
+  artifacts:
+    paths:
+      - techshop-microservice/gateway-service/target/*.jar
+    expire_in: 1 hour
+  only:
+    - main
+    - develop
+    - merge_requests
+
+build:microservices:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  needs: ["build:common-lib"]
+  script:
+    - echo "Building all microservices..."
+    - cd techshop-microservice
+    - |
+      for service in user-service product-service order-service cart-service payment-service notification-service inventory-service review-service; do
+        echo "Building $service..."
+        cd $service
+        mvn clean package -DskipTests
+        cd ..
+      done
+  artifacts:
+    paths:
+      - techshop-microservice/*/target/*.jar
+    expire_in: 1 hour
+  only:
+    - main
+    - develop
+    - merge_requests
+
+build:frontend:
+  stage: build
+  image: node:20-alpine
+  script:
+    - echo "Building frontend..."
+    - cd techshop-frontend
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - techshop-frontend/dist
+    expire_in: 1 hour
+  only:
+    - main
+    - develop
+    - merge_requests
+
+# ==========================================
+# TEST STAGE
+# ==========================================
+
+test:backend:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  needs: ["build:common-lib"]
+  script:
+    - echo "Running backend tests..."
+    - cd techshop-microservice
+    - mvn test
+  coverage: '/Total.*?([0-9]{1,3})%/'
+  artifacts:
+    reports:
+      junit:
+        - techshop-microservice/*/target/surefire-reports/TEST-*.xml
+    paths:
+      - techshop-microservice/*/target/site/jacoco
+    expire_in: 1 week
+  only:
+    - main
+    - develop
+    - merge_requests
+
+test:frontend:
+  stage: test
+  image: node:20-alpine
+  needs: ["build:frontend"]
+  script:
+    - echo "Running frontend tests..."
+    - cd techshop-frontend
+    - npm ci
+    - npm run test -- --run
+  allow_failure: true
+  only:
+    - main
+    - develop
+    - merge_requests
+
+# ==========================================
+# DOCKER BUILD STAGE
+# ==========================================
+
+docker:build-all:
+  stage: docker-build
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  needs:
+    - build:discovery-service
+    - build:gateway-service
+    - build:microservices
+    - build:frontend
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - echo "Building Docker images..."
+    - docker-compose build
+    - |
+      if [ "$CI_COMMIT_BRANCH" == "main" ]; then
+        echo "Pushing images to registry..."
+        docker-compose push
+      fi
+  only:
+    - main
+    - develop
+
+# ==========================================
+# DEPLOY STAGE
+# ==========================================
+
+deploy:development:
+  stage: deploy
+  image: alpine:latest
+  needs: ["docker:build-all"]
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $DEV_SERVER_IP >> ~/.ssh/known_hosts
+  script:
+    - echo "Deploying to development server..."
+    - |
+      ssh $DEV_SERVER_USER@$DEV_SERVER_IP << 'EOF'
+        cd /opt/techshop
+        docker-compose pull
+        docker-compose down
+        docker-compose up -d
+        docker-compose ps
+      EOF
+  environment:
+    name: development
+    url: http://$DEV_SERVER_IP
+  only:
+    - develop
+
+deploy:production:
+  stage: deploy
+  image: alpine:latest
+  needs: ["docker:build-all"]
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $PROD_SERVER_IP >> ~/.ssh/known_hosts
+  script:
+    - echo "Deploying to production server..."
+    - |
+      ssh $PROD_SERVER_USER@$PROD_SERVER_IP << 'EOF'
+        cd /opt/techshop
+        docker-compose pull
+        docker-compose down
+        docker-compose up -d
+        docker-compose ps
+      EOF
+  environment:
+    name: production
+    url: https://techshop.example.com
+  when: manual
+  only:
+    - main
+
+# ==========================================
+# CLEANUP
+# ==========================================
+
+cleanup:old-images:
+  stage: deploy
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  script:
+    - echo "Cleaning up old Docker images..."
+    - docker system prune -af --filter "until=168h"
+  when: manual
+  only:
+    - main

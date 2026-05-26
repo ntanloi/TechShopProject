@@ -1,0 +1,53 @@
+# Docker Compose extension for AI Service
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.ai.yml up -d
+
+services:
+  # MySQL for AI Service
+  mysql-ai:
+    image: mysql:8.0
+    container_name: techshop-mysql-ai
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: techshop_aidb
+    ports:
+      - "3313:3306"
+    volumes:
+      - mysql-ai-data:/var/lib/mysql
+    networks:
+      - techshop-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # AI Service
+  ai-service:
+    build:
+      context: ./techshop-microservice
+      dockerfile: Dockerfile.ai
+    container_name: techshop-ai-service
+    ports:
+      - "8089:8089"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - techshop-network
+    depends_on:
+      mysql-ai:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8089/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  mysql-ai-data:
+
+networks:
+  techshop-network:
+    external: true
