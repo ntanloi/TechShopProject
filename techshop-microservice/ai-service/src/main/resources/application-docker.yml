@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:mysql://ai-db:3306/techshop_aidb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true
+    url: jdbc:mysql://mysql-ai:3306/techshop_aidb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true
 
 eureka:
   client:

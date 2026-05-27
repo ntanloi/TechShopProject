@@ -1,7 +1,6 @@
 import { create } from 'zustand';
-import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:8088/notifications'; // Gateway port
+import axiosClient from '../api/axios';
+import { API_ROUTES } from '../api/routes';
 
 const useNotificationStore = create((set, get) => ({
     notifications: [],
@@ -12,10 +11,7 @@ const useNotificationStore = create((set, get) => ({
         if (!userId) return;
         set({ loading: true });
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get(`${API_BASE_URL}/user/${userId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await axiosClient.get(API_ROUTES.notifications.byUser(userId));
             set({ notifications: res.data, loading: false });
             get().updateUnreadCount(res.data);
         } catch (error) {
@@ -31,10 +27,7 @@ const useNotificationStore = create((set, get) => ({
 
     markAsRead: async (notificationId) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.put(`${API_BASE_URL}/${notificationId}/read`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await axiosClient.put(API_ROUTES.notifications.markRead(notificationId));
             set(state => ({
                 notifications: state.notifications.map(n =>
                     n.id === notificationId ? { ...n, isRead: true } : n
@@ -48,10 +41,7 @@ const useNotificationStore = create((set, get) => ({
 
     markAllAsRead: async (userId) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.put(`${API_BASE_URL}/user/${userId}/read-all`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await axiosClient.put(API_ROUTES.notifications.markAllRead(userId));
             set(state => ({
                 notifications: state.notifications.map(n => ({ ...n, isRead: true })),
                 unreadCount: 0

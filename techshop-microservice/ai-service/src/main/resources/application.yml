@@ -17,6 +17,11 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
+# Gemini API Configuration
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+
 server:
   port: 8089
 
@@ -43,3 +48,8 @@ logging:
   level:
     com.techshop.aiservice: DEBUG
     org.springframework: INFO
+
+# Feign client configuration
+feign:
+  circuitbreaker:
+    enabled: false
