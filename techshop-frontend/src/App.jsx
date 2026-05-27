@@ -6,6 +6,7 @@ import NavBar from "@/components/NavBar.jsx";
 import Footer from "@/components/Footer.jsx";
 import ScrollToTop from "@/components/ScrollToTop.jsx";
 import RequireAuth from "@/components/RequireAuth.jsx";
+import ChatBot from "@/components/ChatBot.jsx";
 
 import AdminLayout from "@/layouts/AdminLayout.jsx";
 
@@ -85,6 +86,8 @@ export default function App() {
       </main>
 
       {!hideLayout && <Footer />}
+
+      <ChatBot />
 
       <ToastContainer
         position="top-right"

@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/ai")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class AiController {
 
     private final AiChatService aiChatService;
@@ -58,5 +57,14 @@ public class AiController {
     @GetMapping("/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("AI Service is running");
+    }
+
+    /**
+     * Clear chat history for a session
+     */
+    @DeleteMapping("/chat/{sessionId}")
+    public ResponseEntity<Void> clearHistory(@PathVariable String sessionId) {
+        aiChatService.clearHistory(sessionId);
+        return ResponseEntity.noContent().build();
     }
 }

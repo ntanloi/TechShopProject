@@ -26,6 +26,9 @@ spring:
             allowedHeaders: ["*"]
             allowCredentials: true
 
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+
       routes:
         # ======================================================
         # Auth & User Service (Higher rate limit for auth)
@@ -198,6 +201,22 @@ spring:
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@ipKeyResolver}"
 
+        # ======================================================
+        # AI Service
+        # ======================================================
+        - id: ai-service
+          uri: lb://ai-service
+          predicates:
+            - Path=/api/ai/**
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
+
       discovery:
         locator:
           enabled: true
@@ -227,7 +246,10 @@ jwt:
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
-
+    org.springframework.cloud.gateway.filter.factory.RetryGatewayFilterFactory: TRACE
+    reactor.netty.http.client: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
 # Resilience4j Configuration for Retry and Circuit Breaker
 resilience4j:
   circuitbreaker:
