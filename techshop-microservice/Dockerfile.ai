@@ -1,0 +1,37 @@
+# Dockerfile for AI Service
+FROM maven:3.9-eclipse-temurin-21 AS builder
+
+WORKDIR /app
+
+# Copy settings and common-lib
+COPY ./settings.xml /root/.m2/settings.xml
+COPY ./common-lib ./common-lib
+
+# Build and install common-lib
+RUN mvn -B -f common-lib/pom.xml clean install -DskipTests
+
+# Copy AI service
+COPY ./ai-service ./ai-service
+
+# Build AI service
+RUN mvn -B -f ai-service/pom.xml clean package -DskipTests \
+    -Dmaven.wagon.http.retryHandler.count=5 \
+    -Dmaven.wagon.httpconnectionManager.ttlSeconds=120
+
+# Runtime stage
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+# Copy JAR from builder
+COPY --from=builder /app/ai-service/target/*.jar app.jar
+
+# Expose port
+EXPOSE 8089
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8089/actuator/health || exit 1
+
+# Run application
+ENTRYPOINT ["java", "-jar", "app.jar", "--spring.profiles.active=docker"]

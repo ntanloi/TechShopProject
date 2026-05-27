@@ -1,6 +1,53 @@
+spring:
+  # Redis for Rate Limiting in Docker
+  data:
+    redis:
+      host: redis
+      port: 6379
+  
+  # Cloud Gateway Configuration
+  cloud:
+    gateway:
+      # Global timeout settings
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 30s
+
 eureka:
   client:
     service-url:
       defaultZone: http://discovery-service:8761/eureka/
   instance:
     prefer-ip-address: true
+
+# Resilience4j Configuration for Retry and Circuit Breaker
+resilience4j:
+  # Retry Configuration - Implements Fault Tolerance: Retry 3-5s (API call 1 service)
+  retry:
+    instances:
+      default:
+        max-attempts: 3
+        wait-duration: 3s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 1.5
+        retry-exceptions:
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+          - org.springframework.web.client.ResourceAccessException
+  
+  # Circuit Breaker Configuration
+  circuitbreaker:
+    instances:
+      default:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+
+# Logging
+logging:
+  level:
+    com.techshop.gatewayservice: DEBUG
+    org.springframework.cloud.gateway: DEBUG

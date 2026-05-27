@@ -6,6 +6,12 @@ spring:
     name: gateway-service
   main:
     web-application-type: reactive
+  # Redis for Rate Limiting
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 60000
 
   cloud:
     gateway:
@@ -22,7 +28,7 @@ spring:
 
       routes:
         # ======================================================
-        # Auth & User Service
+        # Auth & User Service (Higher rate limit for auth)
         # ======================================================
         - id: user-auth
           uri: lb://user-service
@@ -30,6 +36,12 @@ spring:
             - Path=/api/auth/**
           filters:
             - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10  # tokens per second
+                redis-rate-limiter.burstCapacity: 20  # max burst
+                redis-rate-limiter.requestedTokens: 1 # tokens per request
+                key-resolver: "#{@ipKeyResolver}"
 
         - id: user-service
           uri: lb://user-service
@@ -37,9 +49,15 @@ spring:
             - Path=/api/users/**
           filters:
             - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 
         # ======================================================
-        # Product Service
+        # Product Service (High traffic expected)
         # ======================================================
         - id: product-service
           uri: lb://product-service
@@ -47,9 +65,25 @@ spring:
             - Path=/api/products/**, /api/categories/**
           filters:
             - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 40
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
+            - name: Retry
+              args:
+                retries: 3
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                methods: GET
+                backoff:
+                  firstBackoff: 3000ms
+                  maxBackoff: 10000ms
+                  factor: 2
+                  basedOnPreviousValue: true
 
         # ======================================================
-        # Order Service
+        # Order Service (Moderate rate limit)
         # ======================================================
         - id: order-service
           uri: lb://order-service
@@ -57,6 +91,22 @@ spring:
             - Path=/api/orders/**
           filters:
             - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
+            - name: Retry
+              args:
+                retries: 3
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                methods: GET
+                backoff:
+                  firstBackoff: 3000ms
+                  maxBackoff: 10000ms
+                  factor: 2
+                  basedOnPreviousValue: true
 
         # ======================================================
         # Cart Service
@@ -67,9 +117,25 @@ spring:
             - Path=/api/cart/**
           filters:
             - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
+            - name: Retry
+              args:
+                retries: 3
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                methods: GET
+                backoff:
+                  firstBackoff: 3000ms
+                  maxBackoff: 10000ms
+                  factor: 2
+                  basedOnPreviousValue: true
 
         # ======================================================
-        # Payment Service
+        # Payment Service (Strict rate limit for security)
         # ======================================================
         - id: payment-service
           uri: lb://payment-service
@@ -77,6 +143,12 @@ spring:
             - Path=/api/payments/**
           filters:
             - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 2
+                redis-rate-limiter.burstCapacity: 5
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 
         # ======================================================
         # Notification Service
@@ -87,6 +159,12 @@ spring:
             - Path=/api/notifications/**
           filters:
             - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 
         # ======================================================
         # Review Service
@@ -97,6 +175,12 @@ spring:
             - Path=/api/reviews/**
           filters:
             - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 
         # ======================================================
         # Inventory Service
@@ -107,6 +191,12 @@ spring:
             - Path=/api/inventory/**
           filters:
             - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 
       discovery:
         locator:
@@ -137,3 +227,32 @@ jwt:
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
+
+# Resilience4j Configuration for Retry and Circuit Breaker
+resilience4j:
+  circuitbreaker:
+    instances:
+      default:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30000  # 30 seconds
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+  
+  retry:
+    instances:
+      default:
+        max-attempts: 3
+        wait-duration: 3s  # Wait 3 seconds between retries
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+          - org.springframework.web.client.ResourceAccessException
+  
+  timelimiter:
+    instances:
+      default:
+        timeout-duration: 10s

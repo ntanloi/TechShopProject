@@ -8,3 +8,49 @@ eureka:
       defaultZone: http://discovery-service:8761/eureka/
   instance:
     prefer-ip-address: true
+
+# Resilience4j Configuration for Retry - Implements Fault Tolerance: Retry 3-5s
+resilience4j:
+  retry:
+    instances:
+      productService:
+        max-attempts: 3
+        wait-duration: 3s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 1.5
+        retry-exceptions:
+          - feign.RetryableException
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+      inventoryService:
+        max-attempts: 3
+        wait-duration: 3s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 1.5
+        retry-exceptions:
+          - feign.RetryableException
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+  
+  circuitbreaker:
+    instances:
+      productService:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+      inventoryService:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+
+# Feign Client Configuration
+feign:
+  client:
+    config:
+      default:
+        connect-timeout: 5000
+        read-timeout: 10000
+  circuitbreaker:
+    enabled: true

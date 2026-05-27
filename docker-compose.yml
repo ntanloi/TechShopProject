@@ -1,0 +1,442 @@
+services:
+  # MySQL Databases
+  mysql-user:
+    image: mysql:8.0
+    container_name: techshop-mysql-user
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: techshop_userdb
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-user-data:/var/lib/mysql
+    networks:
+      - techshop-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql-product:
+    image: mysql:8.0
+    container_name: techshop-mysql-product
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: techshop_productdb
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql-product-data:/var/lib/mysql
+    networks:
+      - techshop-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql-order:
+    image: mysql:8.0
+    container_name: techshop-mysql-order
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: techshop_orderdb
+    ports:
+      - "3309:3306"
+    volumes:
+      - mysql-order-data:/var/lib/mysql
+    networks:
+      - techshop-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql-cart:
+    image: mysql:8.0
+    container_name: techshop-mysql-cart
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: techshop_cartdb
+    ports:
+      - "3310:3306"
+    volumes:
+      - mysql-cart-data:/var/lib/mysql
+    networks:
+      - techshop-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql-payment:
+    image: mysql:8.0
+    container_name: techshop-mysql-payment
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: techshop_paymentdb
+    ports:
+      - "3311:3306"
+    volumes:
+      - mysql-payment-data:/var/lib/mysql
+    networks:
+      - techshop-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql-notification:
+    image: mysql:8.0
+    container_name: techshop-mysql-notification
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: techshop_notificationdb
+    ports:
+      - "3312:3306"
+    volumes:
+      - mysql-notification-data:/var/lib/mysql
+    networks:
+      - techshop-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql-inventory:
+    image: mysql:8.0
+    container_name: techshop-mysql-inventory
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: techshop_inventorydb
+    ports:
+      - "3313:3306"
+    volumes:
+      - mysql-inventory-data:/var/lib/mysql
+    networks:
+      - techshop-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for Caching
+  redis:
+    image: redis:7-alpine
+    container_name: techshop-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - techshop-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Eureka Discovery Service
+  discovery-service:
+    build:
+      context: ./techshop-microservice
+      dockerfile: Dockerfile.discovery
+    container_name: techshop-discovery
+    ports:
+      - "8761:8761"
+    networks:
+      - techshop-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Gateway Service
+  gateway-service:
+    build:
+      context: ./techshop-microservice
+      dockerfile: Dockerfile.gateway
+    container_name: techshop-gateway
+    ports:
+      - "8080:8080"
+    networks:
+      - techshop-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # User Service
+  user-service:
+    build:
+      context: ./techshop-microservice
+      dockerfile: Dockerfile.user
+    container_name: techshop-user-service
+    ports:
+      - "8081:8081"
+    networks:
+      - techshop-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-user:3306/techshop_userdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET:-techshop-super-secret-key-change-in-production-2024}
+    depends_on:
+      mysql-user:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Product Service
+  product-service:
+    build:
+      context: ./techshop-microservice
+      dockerfile: Dockerfile.product
+    container_name: techshop-product-service
+    ports:
+      - "8082:8082"
+    networks:
+      - techshop-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-product:3306/techshop_productdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET:-techshop-super-secret-key-change-in-production-2024}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-dpf8w7bj6}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-578248296715318}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-2dT1gIUmll6cV0Fd5gptQOherK0}
+    depends_on:
+      mysql-product:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Order Service
+  order-service:
+    build:
+      context: ./techshop-microservice
+      dockerfile: Dockerfile.order
+    container_name: techshop-order-service
+    ports:
+      - "8083:8083"
+    networks:
+      - techshop-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-order:3306/techshop_orderdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET:-techshop-super-secret-key-change-in-production-2024}
+      - PAYMENT_RETURN_URL=${PAYMENT_RETURN_URL:-http://localhost:5173/payment-result}
+    depends_on:
+      mysql-order:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Cart Service
+  cart-service:
+    build:
+      context: ./techshop-microservice
+      dockerfile: Dockerfile.cart
+    container_name: techshop-cart-service
+    ports:
+      - "8084:8084"
+    networks:
+      - techshop-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-cart:3306/techshop_cartdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET:-techshop-super-secret-key-change-in-production-2024}
+    depends_on:
+      mysql-cart:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Payment Service
+  payment-service:
+    build:
+      context: ./techshop-microservice
+      dockerfile: Dockerfile.payment
+    container_name: techshop-payment-service
+    ports:
+      - "8085:8085"
+    networks:
+      - techshop-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-payment:3306/techshop_paymentdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - VNPAY_TMN_CODE=${VNPAY_TMN_CODE:-NWC83CLJ}
+      - VNPAY_HASH_SECRET=${VNPAY_HASH_SECRET:-Z1T4ELP019FXYP8F1T7WINQVY5BHJC4V}
+    depends_on:
+      mysql-payment:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./techshop-microservice
+      dockerfile: Dockerfile.notification
+    container_name: techshop-notification-service
+    ports:
+      - "8086:8086"
+    networks:
+      - techshop-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-notification:3306/techshop_notificationdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET:-techshop-super-secret-key-change-in-production-2024}
+      - SPRING_MAIL_USERNAME=${MAIL_USERNAME:-tcminhangiang@gmail.com}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD:-iipx bevp sshi lbgf}
+    depends_on:
+      mysql-notification:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Inventory Service
+  inventory-service:
+    build:
+      context: ./techshop-microservice
+      dockerfile: Dockerfile.inventory
+    container_name: techshop-inventory-service
+    ports:
+      - "8088:8088"
+    networks:
+      - techshop-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-inventory:3306/techshop_inventorydb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+    depends_on:
+      mysql-inventory:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Review Service
+  review-service:
+    build:
+      context: ./techshop-microservice
+      dockerfile: Dockerfile.review
+    container_name: techshop-review-service
+    ports:
+      - "8087:8087"
+    networks:
+      - techshop-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-product:3306/techshop_productdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET:-techshop-super-secret-key-change-in-production-2024}
+    depends_on:
+      mysql-product:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+networks:
+  techshop-network:
+    driver: bridge
+
+volumes:
+  mysql-user-data:
+  mysql-product-data:
+  mysql-order-data:
+  mysql-cart-data:
+  mysql-payment-data:
+  mysql-notification-data:
+  mysql-inventory-data:
+  redis-data:
