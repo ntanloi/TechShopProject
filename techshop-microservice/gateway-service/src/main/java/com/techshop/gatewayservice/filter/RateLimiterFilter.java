@@ -24,7 +24,7 @@ import java.util.Objects;
 @Slf4j
 public class RateLimiterFilter implements GlobalFilter, Ordered {
 
-    private static final int MAX_REQUESTS_PER_MINUTE = 100;
+    private static final int MAX_REQUESTS_PER_MINUTE = 1000; // Increased for development
     private static final Duration WINDOW_DURATION = Duration.ofMinutes(1);
 
     @Autowired
