@@ -40,6 +40,15 @@ public class RedisConfig {
         template.setHashValueSerializer(jsonRedisSerializer());
         
         template.afterPropertiesSet();
+        
+        // Test Redis connection on startup
+        try {
+            template.getConnectionFactory().getConnection().ping();
+            System.out.println("✅ Redis connection successful!");
+        } catch (Exception e) {
+            System.err.println("❌ Redis connection failed: " + e.getMessage());
+        }
+        
         return template;
     }
 
