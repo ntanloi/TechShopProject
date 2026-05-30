@@ -134,9 +134,11 @@ services:
       - "6379:6379"
     volumes:
       - redis-data:/data
+      - ./redis/redis.conf:/data/redis.conf
+      - ./redis/docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh
     networks:
       - techshop-network
-    command: redis-server --appendonly yes
+    entrypoint: ["/bin/sh", "/usr/local/bin/docker-entrypoint.sh"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
