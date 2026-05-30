@@ -19,7 +19,7 @@ redis-cli MONITOR | while IFS= read -r line; do
     # Check if line contains products::
     if echo "$line" | grep -q "products::"; then
         timestamp=$(date '+%H:%M:%S')
-        
+
         # Check operation type
         if echo "$line" | grep -q '"SET"'; then
             product_id=$(echo "$line" | grep -o 'products::[0-9]*' | cut -d: -f3)
