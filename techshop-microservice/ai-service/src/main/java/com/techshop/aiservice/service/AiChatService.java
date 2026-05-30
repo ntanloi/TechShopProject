@@ -33,23 +33,26 @@ public class AiChatService {
 
     private final Map<String, List<Map<String, Object>>> conversationHistory = new ConcurrentHashMap<>();
 
-    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
     private static final String SYSTEM_PROMPT = """
-            Bạn là AI Assistant của TechShop - một cửa hàng công nghệ trực tuyến.
+            Bạn là AI Assistant của TechShop - một cửa hàng công nghệ trực tuyến chuyên cung cấp laptop, điện thoại, tai nghe và các thiết bị công nghệ.
             
             Nhiệm vụ:
-            - Hỗ trợ khách hàng tìm sản phẩm, tư vấn mua hàng
-            - Tra cứu đơn hàng dựa trên dữ liệu thực được cung cấp
-            - Giải đáp thắc mắc về thanh toán, giao hàng, đổi trả
+            - Hỗ trợ khách hàng tìm sản phẩm, tư vấn mua sắm công nghệ dựa trên thông tin thực tế của cửa hàng.
+            - Tra cứu và cung cấp trạng thái đơn hàng dựa trên dữ liệu thực tế được cung cấp.
+            - Giải đáp thắc mắc về chính sách thanh toán, giao hàng, đổi trả.
             
-            Quy tắc:
-            - Trả lời bằng tiếng Việt, thân thiện, ngắn gọn
-            - Khi có dữ liệu đơn hàng/sản phẩm, hãy trả lời dựa trên dữ liệu thực
-            - Nếu không có dữ liệu, hướng dẫn khách thao tác trên website
-            - Chính sách đổi trả: 7 ngày
-            - Thanh toán: VNPay, COD
-            - Giao hàng: 2-5 ngày, nội thành 1-2 ngày
+            Quy tắc tư vấn sản phẩm:
+            1. Khi khách hỏi mua, tìm kiếm hoặc cần tư vấn sản phẩm, hãy LUÔN kiểm tra phần dữ liệu thực tế [SẢN PHẨM TÌM THẤY] được cung cấp trong ngữ cảnh.
+            2. Nếu có sản phẩm phù hợp trong danh sách [SẢN PHẨM TÌM THẤY], bạn PHẢI giới thiệu các sản phẩm đó, ghi rõ: Tên sản phẩm, Giá bán (bằng VNĐ) và Mô tả ngắn. Tuyệt đối không tự bịa ra sản phẩm hoặc giá cả không có trong danh sách.
+            3. Nếu không có dữ liệu [SẢN PHẨM TÌM THẤY] hoặc danh sách trống hoặc không tìm thấy sản phẩm nào khớp với yêu cầu của khách, hãy lịch sự phản hồi: "Dạ hiện tại TechShop chưa có sẵn sản phẩm này hoặc sản phẩm đang tạm hết hàng ạ." Sau đó gợi ý khách hàng tham khảo các danh mục sản phẩm khác trên website hoặc tìm kiếm từ khóa khác.
+            
+            Quy tắc chung:
+            - Trả lời bằng tiếng Việt lịch sự, thân thiện, ngắn gọn và tập trung vào nhu cầu của khách hàng.
+            - Chính sách đổi trả: 7 ngày.
+            - Thanh toán: hỗ trợ qua cổng VNPay và thanh toán khi nhận hàng (COD).
+            - Giao hàng: Giao hàng toàn quốc từ 2-5 ngày, nội thành Hà Nội/TP.HCM giao nhanh trong 1-2 ngày.
             """;
 
     public ChatResponse chat(ChatRequest request) {
@@ -108,11 +111,13 @@ public class AiChatService {
         }
 
         // If user asks about products
-        if (message.contains("sản phẩm") || message.contains("product") || message.contains("laptop")
-                || message.contains("điện thoại") || message.contains("tai nghe") || message.contains("tìm")) {
+        String keyword = extractProductKeyword(message);
+        if (keyword != null 
+                || message.contains("sản phẩm") || message.contains("product") || message.contains("laptop")
+                || message.contains("điện thoại") || message.contains("tai nghe") || message.contains("tìm")
+                || message.contains("mua") || message.contains("cần") || message.contains("giá") || message.contains("bán")) {
             try {
                 // Extract keyword for search
-                String keyword = extractProductKeyword(message);
                 Map<String, Object> products;
                 if (keyword != null) {
                     products = productServiceClient.searchProducts(keyword, 0, 5);
@@ -141,7 +146,12 @@ public class AiChatService {
     }
 
     private String extractProductKeyword(String message) {
-        String[] keywords = {"laptop", "điện thoại", "phone", "tai nghe", "tablet", "iphone", "samsung", "macbook", "airpod"};
+        String[] keywords = {
+            "laptop", "điện thoại", "phone", "tai nghe", "tablet", "máy tính",
+            "iphone", "samsung", "macbook", "airpod", "ipad", "xiaomi", "oppo",
+            "dell", "hp", "asus", "lenovo", "acer", "sony", "logitech",
+            "bàn phím", "chuột", "sạc", "tai nghe"
+        };
         for (String kw : keywords) {
             if (message.contains(kw)) return kw;
         }

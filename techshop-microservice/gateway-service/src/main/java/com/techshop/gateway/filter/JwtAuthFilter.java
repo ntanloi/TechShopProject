@@ -28,7 +28,8 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             "/api/auth/",
             "/api/products",
             "/api/categories",
-            "/api/reviews"
+            "/api/reviews",
+            "/api/ai"
     );
 
     @Override
