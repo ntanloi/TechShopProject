@@ -33,7 +33,7 @@ public class AiChatService {
 
     private final Map<String, List<Map<String, Object>>> conversationHistory = new ConcurrentHashMap<>();
 
-    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
+    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
     private static final String SYSTEM_PROMPT = """
             Bạn là AI Assistant của TechShop - một cửa hàng công nghệ trực tuyến chuyên cung cấp laptop, điện thoại, tai nghe và các thiết bị công nghệ.
@@ -74,8 +74,7 @@ public class AiChatService {
                     .build();
         } catch (Exception e) {
             log.error("AI Chat - Gemini call failed: {}", e.getMessage(), e);
-            String errorMsg = "Xin lỗi, hiện tại tôi đang gặp sự cố kỹ thuật. Chi tiết lỗi: " + e.getMessage() + 
-                    " (" + e.getClass().getSimpleName() + ")";
+            String errorMsg = "Xin lỗi, hiện tại tôi đang gặp sự cố kỹ thuật. Vui lòng thử lại sau hoặc liên hệ TechShop qua email/hotline để được hỗ trợ.";
             return ChatResponse.builder()
                     .message(errorMsg)
                     .intent("error")
