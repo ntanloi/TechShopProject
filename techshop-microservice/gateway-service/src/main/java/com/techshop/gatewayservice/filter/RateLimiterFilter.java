@@ -39,20 +39,39 @@ public class RateLimiterFilter implements GlobalFilter, Ordered {
                 .increment(key)
                 .flatMap(count -> {
                     if (count == 1) {
-                        // First request in window, set expiration
+                        // First request in window - set TTL atomically
+                        // Use expire to ensure the key will be cleaned up after 1 minute
                         return redisTemplate.expire(key, WINDOW_DURATION)
                                 .then(Mono.defer(() -> processRequest(exchange, chain, count)));
                     } else if (count > MAX_REQUESTS_PER_MINUTE) {
-                        // Rate limit exceeded
-                        log.warn("Rate limit exceeded for IP: {} (count: {})", clientIp, count);
+                        // Rate limit exceeded - block until window expires
+                        log.warn("Rate limit exceeded for IP: {} (count: {}/{})", clientIp, count, MAX_REQUESTS_PER_MINUTE);
                         exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
                         exchange.getResponse().getHeaders().add("X-RateLimit-Limit", String.valueOf(MAX_REQUESTS_PER_MINUTE));
                         exchange.getResponse().getHeaders().add("X-RateLimit-Remaining", "0");
-                        exchange.getResponse().getHeaders().add("Retry-After", "60");
-                        return exchange.getResponse().setComplete();
+                        // Get actual TTL remaining for Retry-After header
+                        return redisTemplate.getExpire(key)
+                                .flatMap(ttl -> {
+                                    long retryAfter = ttl != null ? ttl.getSeconds() : 60;
+                                    exchange.getResponse().getHeaders().add("Retry-After", String.valueOf(retryAfter));
+                                    return exchange.getResponse().setComplete();
+                                })
+                                .switchIfEmpty(Mono.defer(() -> {
+                                    exchange.getResponse().getHeaders().add("Retry-After", "60");
+                                    return exchange.getResponse().setComplete();
+                                }));
                     } else {
-                        // Within limit
-                        return processRequest(exchange, chain, count);
+                        // Within limit - ensure TTL exists (防止 TTL 丢失)
+                        return redisTemplate.getExpire(key)
+                                .flatMap(ttl -> {
+                                    if (ttl == null || ttl.getSeconds() < 0) {
+                                        // Key lost its TTL somehow, re-set it
+                                        return redisTemplate.expire(key, WINDOW_DURATION)
+                                                .then(Mono.defer(() -> processRequest(exchange, chain, count)));
+                                    }
+                                    return processRequest(exchange, chain, count);
+                                })
+                                .switchIfEmpty(Mono.defer(() -> processRequest(exchange, chain, count)));
                     }
                 })
                 .onErrorResume(e -> {
