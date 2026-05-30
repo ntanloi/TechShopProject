@@ -22,6 +22,8 @@ spring:
             allowedOrigins:
               - "http://localhost:3000"
               - "http://localhost:5173"
+            allowedOriginPatterns:
+              - "https://*.vercel.app"
             allowedMethods: ["*"]
             allowedHeaders: ["*"]
             allowCredentials: true
