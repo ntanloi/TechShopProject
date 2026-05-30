@@ -56,7 +56,9 @@ jobs:
             cd ~/TechShopProject || exit 1
 
             echo "📥 Pulling latest code..."
-            git pull origin ${{ github.event.workflow_run.head_branch || 'main' }}
+            git fetch origin
+            git reset --hard origin/${{ github.event.workflow_run.head_branch || 'main' }}
+            git clean -fd
 
             echo "📝 Updating .env file..."
             cat > .env << 'ENVEOF'
