@@ -74,9 +74,8 @@ public class AiChatService {
                     .build();
         } catch (Exception e) {
             log.error("AI Chat - Gemini call failed: {}", e.getMessage(), e);
-            // Return a simple error message instead of hardcoded if-else fallback
-            String errorMsg = "Xin lỗi, hiện tại tôi đang gặp sự cố kỹ thuật. " +
-                    "Vui lòng thử lại sau hoặc liên hệ TechShop qua email/hotline để được hỗ trợ.";
+            String errorMsg = "Xin lỗi, hiện tại tôi đang gặp sự cố kỹ thuật. Chi tiết lỗi: " + e.getMessage() + 
+                    " (" + e.getClass().getSimpleName() + ")";
             return ChatResponse.builder()
                     .message(errorMsg)
                     .intent("error")
@@ -166,6 +165,14 @@ public class AiChatService {
             throw new IllegalStateException("GEMINI_API_KEY is not configured in environment variables");
         }
 
+        String key = geminiApiKey.trim();
+        if (key.startsWith("\"") && key.endsWith("\"")) {
+            key = key.substring(1, key.length() - 1);
+        } else if (key.startsWith("'") && key.endsWith("'")) {
+            key = key.substring(1, key.length() - 1);
+        }
+        key = key.trim();
+
         List<Map<String, Object>> contents = new ArrayList<>();
 
         // Add history
@@ -198,9 +205,9 @@ public class AiChatService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-        String url = GEMINI_URL + "?key=" + geminiApiKey.trim();
+        String url = GEMINI_URL + "?key=" + key;
 
-        log.info("Calling Gemini API, key length={}", geminiApiKey.trim().length());
+        log.info("Calling Gemini API, key length={}", key.length());
         ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
 
         Map body = response.getBody();
