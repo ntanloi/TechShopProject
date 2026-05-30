@@ -400,6 +400,54 @@ services:
       retries: 5
       start_period: 60s
 
+  # AI MySQL Database
+  mysql-ai:
+    image: mysql:8.0
+    container_name: techshop-mysql-ai
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: techshop_aidb
+    ports:
+      - "3314:3306"
+    volumes:
+      - mysql-ai-data:/var/lib/mysql
+    networks:
+      - techshop-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # AI Service
+  ai-service:
+    build:
+      context: ./techshop-microservice
+      dockerfile: Dockerfile.ai
+    container_name: techshop-ai-service
+    ports:
+      - "8089:8089"
+    networks:
+      - techshop-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-ai:3306/techshop_aidb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      mysql-ai:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8089/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
   # Review Service
   review-service:
     build:
@@ -442,3 +490,4 @@ volumes:
   mysql-notification-data:
   mysql-inventory-data:
   redis-data:
+  mysql-ai-data:
