@@ -400,6 +400,35 @@ services:
       retries: 5
       start_period: 60s
 
+  # Review Service
+  review-service:
+    build:
+      context: ./techshop-microservice
+      dockerfile: Dockerfile.review
+    container_name: techshop-review-service
+    ports:
+      - "8087:8087"
+    networks:
+      - techshop-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-product:3306/techshop_productdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=123456
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET:-techshop-super-secret-key-change-in-production-2024}
+    depends_on:
+      mysql-product:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
   # AI MySQL Database
   mysql-ai:
     image: mysql:8.0
@@ -442,36 +471,7 @@ services:
       discovery-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8089/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-  # Review Service
-  review-service:
-    build:
-      context: ./techshop-microservice
-      dockerfile: Dockerfile.review
-    container_name: techshop-review-service
-    ports:
-      - "8087:8087"
-    networks:
-      - techshop-network
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-product:3306/techshop_productdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=123456
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
-      - JWT_SECRET=${JWT_SECRET:-techshop-super-secret-key-change-in-production-2024}
-    depends_on:
-      mysql-product:
-        condition: service_healthy
-      discovery-service:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8087/actuator/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8089/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -489,5 +489,5 @@ volumes:
   mysql-payment-data:
   mysql-notification-data:
   mysql-inventory-data:
-  redis-data:
   mysql-ai-data:
+  redis-data:
