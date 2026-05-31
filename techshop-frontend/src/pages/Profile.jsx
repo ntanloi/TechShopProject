@@ -20,7 +20,14 @@ export default function Profile() {
     setLoading(true);
     try {
       const res = await axiosClient.put("/api/users/me", form);
-      setUser({ ...user, ...res.data });
+      const updatedUser = { ...user, ...res.data };
+      setUser(updatedUser);
+      
+      // Cập nhật localStorage để giữ data khi reload
+      if (res.data.fullName) localStorage.setItem("fullName", res.data.fullName);
+      if (res.data.phone) localStorage.setItem("phone", res.data.phone);
+      if (res.data.address) localStorage.setItem("address", res.data.address);
+      
       toast.success("Cập nhật thành công!");
     } catch {
       toast.error("Cập nhật thất bại!");

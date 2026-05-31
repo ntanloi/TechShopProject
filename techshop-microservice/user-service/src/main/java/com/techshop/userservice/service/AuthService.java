@@ -59,6 +59,8 @@ public class AuthService {
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
+                .phone(user.getPhone())
+                .address(user.getAddress())
                 .role(user.getRole().name())
                 .message("Đăng ký thành công!")
                 .build();
@@ -86,6 +88,8 @@ public class AuthService {
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
+                .phone(user.getPhone())
+                .address(user.getAddress())
                 .role(user.getRole().name())
                 .message("Đăng nhập thành công!")
                 .build();
@@ -111,6 +115,8 @@ public class AuthService {
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
+                .phone(user.getPhone())
+                .address(user.getAddress())
                 .role(role)
                 .build();
     }
