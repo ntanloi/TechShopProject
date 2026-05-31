@@ -20,8 +20,8 @@ export default function PaymentResult() {
 
         console.log("VNPay callback params:", params);
 
-        // Gọi backend để verify payment (sử dụng axiosClient để tự động lấy baseURL từ env)
-        const response = await axiosClient.get("/payments/vnpay/callback", {
+        // Gọi backend để verify payment (cần prefix /api vì gateway routing là /api/payments/**)
+        const response = await axiosClient.get("/api/payments/vnpay/callback", {
           params: params
         });
 

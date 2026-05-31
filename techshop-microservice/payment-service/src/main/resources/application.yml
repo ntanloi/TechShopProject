@@ -38,7 +38,7 @@ vnpay:
   tmn-code: NWC83CLJ
   hash-secret: Z1T4ELP019FXYP8F1T7WINQVY5BHJC4V
   pay-url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
-  return-url: http://localhost:5173/payment-result
+  return-url: https://tech-shop-project-delta.vercel.app/payment-result
   api-url: https://sandbox.vnpayment.vn/merchant_webapi/api/transaction
   version: 2.1.0
   command: pay
