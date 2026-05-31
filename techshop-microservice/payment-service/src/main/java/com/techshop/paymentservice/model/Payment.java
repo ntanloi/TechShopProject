@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "payments")
@@ -23,6 +24,15 @@ public class Payment {
     @Column(nullable = false)
     private Long userId;
 
+    // Mã đơn hàng (lưu snapshot để event có đủ thông tin khi bắn Kafka)
+    private String orderCode;
+
+    // Email người dùng (để Notification Service gửi mail)
+    private String userEmail;
+
+    // Tên người nhận hàng (để email cá nhân hóa)
+    private String receiverName;
+
     @Column(nullable = false)
     private BigDecimal amount;
 
@@ -38,6 +48,11 @@ public class Payment {
     
     @Column(length = 1000)  // Tăng kích thước để chứa URL VNPay dài
     private String paymentUrl;     // VNPay redirect URL
+
+    // Lưu snapshot danh sách sản phẩm dưới dạng JSON
+    // Dùng khi bắn PaymentFailedEvent để Inventory Service tự release stock
+    @Column(columnDefinition = "TEXT")
+    private String itemsJson;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;
