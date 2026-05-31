@@ -74,14 +74,22 @@ spring:
                 redis-rate-limiter.burstCapacity: 40
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@ipKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: default
+                fallbackUri: forward:/fallback/products
             - name: Retry
               args:
                 retries: 3
-                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
                 methods: GET
+                exceptions:
+                  - java.io.IOException
+                  - org.springframework.cloud.gateway.support.TimeoutException
+                  - org.springframework.cloud.gateway.support.NotFoundException
                 backoff:
-                  firstBackoff: 3000ms
-                  maxBackoff: 10000ms
+                  firstBackoff: 1000ms
+                  maxBackoff: 5000ms
                   factor: 2
                   basedOnPreviousValue: true
 
@@ -100,14 +108,22 @@ spring:
                 redis-rate-limiter.burstCapacity: 10
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@ipKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: default
+                fallbackUri: forward:/fallback/orders
             - name: Retry
               args:
                 retries: 3
-                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
                 methods: GET
+                exceptions:
+                  - java.io.IOException
+                  - org.springframework.cloud.gateway.support.TimeoutException
+                  - org.springframework.cloud.gateway.support.NotFoundException
                 backoff:
-                  firstBackoff: 3000ms
-                  maxBackoff: 10000ms
+                  firstBackoff: 1000ms
+                  maxBackoff: 5000ms
                   factor: 2
                   basedOnPreviousValue: true
 
@@ -126,14 +142,22 @@ spring:
                 redis-rate-limiter.burstCapacity: 20
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@ipKeyResolver}"
+            - name: CircuitBreaker
+              args:
+                name: default
+                fallbackUri: forward:/fallback/cart
             - name: Retry
               args:
                 retries: 3
-                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
                 methods: GET
+                exceptions:
+                  - java.io.IOException
+                  - org.springframework.cloud.gateway.support.TimeoutException
+                  - org.springframework.cloud.gateway.support.NotFoundException
                 backoff:
-                  firstBackoff: 3000ms
-                  maxBackoff: 10000ms
+                  firstBackoff: 1000ms
+                  maxBackoff: 5000ms
                   factor: 2
                   basedOnPreviousValue: true
 
@@ -255,12 +279,23 @@ resilience4j:
   circuitbreaker:
     instances:
       default:
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 30000  # 30 seconds
-        permitted-number-of-calls-in-half-open-state: 3
+        # --- Testing-friendly thresholds (production: tăng sliding-window-size lên 20+) ---
+        sliding-window-size: 5          # Chỉ cần 5 calls để tính failure rate
+        minimum-number-of-calls: 3      # CB bắt đầu đánh giá sau 3 calls
+        failure-rate-threshold: 60      # Mở CB khi >60% fail
+        slow-call-rate-threshold: 100    # Coi là chậm nếu >80% call vượt slow-call-duration
+        slow-call-duration-threshold: 5s
+        wait-duration-in-open-state: 15s   # Giảm xuống 15s để test HALF-OPEN nhanh hơn
+        permitted-number-of-calls-in-half-open-state: 2
         automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+        record-exceptions:
+          - io.github.resilience4j.circuitbreaker.CallNotPermittedException
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - java.net.ConnectException
+          - reactor.netty.http.client.PrematureCloseException
+          - io.netty.channel.ConnectTimeoutException
   
   retry:
     instances:

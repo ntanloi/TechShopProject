@@ -75,8 +75,12 @@ public class RateLimiterFilter implements GlobalFilter, Ordered {
                     }
                 })
                 .onErrorResume(e -> {
-                    // If Redis is down, allow request to pass through
+                    // If Redis is down, allow request to pass through (fail-open)
                     log.error("Rate limiter error (Redis unavailable): {}", e.getMessage());
+                    // Only proceed if response hasn't been committed yet
+                    if (exchange.getResponse().isCommitted()) {
+                        return Mono.empty();
+                    }
                     return chain.filter(exchange);
                 });
     }
