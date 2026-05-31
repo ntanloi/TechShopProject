@@ -24,7 +24,24 @@ export default function Register() {
     try {
       const res = await userApi.register(form);
       const { token, ...userData } = res.data;
-      login(token, userData);
+      
+      // Lưu token trước để có thể gọi API
+      localStorage.setItem("token", token);
+
+      // Gọi API để lấy đầy đủ thông tin user bao gồm phone và address
+      const userRes = await userApi.getMe();
+      const fullUserData = userRes.data;
+
+      // Lưu vào context với đầy đủ thông tin
+      login(token, {
+        id: fullUserData.id || userData.id,
+        email: fullUserData.email || userData.email,
+        role: fullUserData.role || userData.role,
+        fullName: fullUserData.fullName || userData.fullName,
+        phone: fullUserData.phone || form.phone, // Fallback về form.phone nếu API không trả về
+        address: fullUserData.address || userData.address
+      });
+
       toast.success("Đăng ký thành công! Chào mừng bạn đến TechShop 🎉");
       nav("/");
     } catch (err) {
