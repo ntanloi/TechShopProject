@@ -35,6 +35,11 @@ public class RateLimiterFilter implements GlobalFilter, Ordered {
         String clientIp = getClientIp(exchange);
         String key = "rate_limit:" + clientIp;
 
+        if (redisTemplate == null) {
+            log.error("Rate limiter error: redisTemplate is null! Component scanning or Autowiring failed.");
+            return chain.filter(exchange);
+        }
+
         return redisTemplate.opsForValue()
                 .increment(key)
                 .flatMap(count -> {

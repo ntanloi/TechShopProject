@@ -33,37 +33,35 @@ public class AiChatService {
 
     private final Map<String, List<Map<String, Object>>> conversationHistory = new ConcurrentHashMap<>();
 
-    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
     private static final String SYSTEM_PROMPT = """
-            Bạn là AI Assistant của TechShop - một cửa hàng công nghệ trực tuyến.
+            Bạn là AI Assistant của TechShop - một cửa hàng công nghệ trực tuyến chuyên cung cấp laptop, điện thoại, tai nghe và các thiết bị công nghệ.
             
             Nhiệm vụ:
-            - Hỗ trợ khách hàng tìm sản phẩm, tư vấn mua hàng
-            - Tra cứu đơn hàng dựa trên dữ liệu thực được cung cấp
-            - Giải đáp thắc mắc về thanh toán, giao hàng, đổi trả
+            - Hỗ trợ khách hàng tìm sản phẩm, tư vấn mua sắm công nghệ dựa trên thông tin thực tế của cửa hàng.
+            - Tra cứu và cung cấp trạng thái đơn hàng dựa trên dữ liệu thực tế được cung cấp.
+            - Giải đáp thắc mắc về chính sách thanh toán, giao hàng, đổi trả.
             
-            Quy tắc:
-            - Trả lời bằng tiếng Việt, thân thiện, ngắn gọn
-            - Khi có dữ liệu đơn hàng/sản phẩm, hãy trả lời dựa trên dữ liệu thực
-            - Nếu không có dữ liệu, hướng dẫn khách thao tác trên website
-            - Chính sách đổi trả: 7 ngày
-            - Thanh toán: VNPay, COD
-            - Giao hàng: 2-5 ngày, nội thành 1-2 ngày
+            Quy tắc tư vấn sản phẩm:
+            1. Khi khách hỏi mua, tìm kiếm hoặc cần tư vấn sản phẩm, hãy LUÔN kiểm tra phần dữ liệu thực tế [SẢN PHẨM TÌM THẤY] được cung cấp trong ngữ cảnh.
+            2. Nếu có sản phẩm phù hợp trong danh sách [SẢN PHẨM TÌM THẤY], bạn PHẢI giới thiệu các sản phẩm đó, ghi rõ: Tên sản phẩm, Giá bán (bằng VNĐ) và Mô tả ngắn. Tuyệt đối không tự bịa ra sản phẩm hoặc giá cả không có trong danh sách.
+            3. Nếu không có dữ liệu [SẢN PHẨM TÌM THẤY] hoặc danh sách trống hoặc không tìm thấy sản phẩm nào khớp với yêu cầu của khách, hãy lịch sự phản hồi: "Dạ hiện tại TechShop chưa có sẵn sản phẩm này hoặc sản phẩm đang tạm hết hàng ạ." Sau đó gợi ý khách hàng tham khảo các danh mục sản phẩm khác trên website hoặc tìm kiếm từ khóa khác.
+            
+            Quy tắc chung:
+            - Trả lời bằng tiếng Việt lịch sự, thân thiện, ngắn gọn và tập trung vào nhu cầu của khách hàng.
+            - Chính sách đổi trả: 7 ngày.
+            - Thanh toán: hỗ trợ qua cổng VNPay và thanh toán khi nhận hàng (COD).
+            - Giao hàng: Giao hàng toàn quốc từ 2-5 ngày, nội thành Hà Nội/TP.HCM giao nhanh trong 1-2 ngày.
             """;
 
     public ChatResponse chat(ChatRequest request) {
-        log.info("AI Chat - Processing: {}", request.getMessage());
+        log.info("AI Chat - Processing: '{}' | API key present: {}", request.getMessage(), !geminiApiKey.isBlank());
+
         String sessionId = request.getSessionId() != null ? request.getSessionId() : UUID.randomUUID().toString();
 
         // Gather context data based on user message and userId
         String contextData = gatherContext(request);
-
-        // Check if API key is configured
-        if (geminiApiKey == null || geminiApiKey.isBlank()) {
-            log.warn("AI Chat - Gemini API key not configured, using fallback");
-            return buildFallbackResponse(request.getMessage(), sessionId, contextData);
-        }
 
         try {
             String aiResponse = callGemini(request.getMessage(), sessionId, contextData);
@@ -75,8 +73,15 @@ public class AiChatService {
                     .sessionId(sessionId)
                     .build();
         } catch (Exception e) {
-            log.error("AI Chat - Gemini error: {}", e.getMessage());
-            return buildFallbackResponse(request.getMessage(), sessionId, contextData);
+            log.error("AI Chat - Gemini call failed: {}", e.getMessage(), e);
+            String errorMsg = "Xin lỗi, hiện tại tôi đang gặp sự cố kỹ thuật. Vui lòng thử lại sau hoặc liên hệ TechShop qua email/hotline để được hỗ trợ.";
+            return ChatResponse.builder()
+                    .message(errorMsg)
+                    .intent("error")
+                    .confidence(0.0)
+                    .timestamp(LocalDateTime.now())
+                    .sessionId(sessionId)
+                    .build();
         }
     }
 
@@ -85,7 +90,7 @@ public class AiChatService {
         String message = request.getMessage().toLowerCase();
 
         // If user asks about orders and userId is provided
-        if ((message.contains("đơn hàng") || message.contains("order") || message.contains("đơn")) 
+        if ((message.contains("đơn hàng") || message.contains("order") || message.contains("đơn"))
                 && request.getUserId() != null && !request.getUserId().isBlank()) {
             try {
                 Long userId = Long.parseLong(request.getUserId());
@@ -108,11 +113,12 @@ public class AiChatService {
         }
 
         // If user asks about products
-        if (message.contains("sản phẩm") || message.contains("product") || message.contains("laptop")
-                || message.contains("điện thoại") || message.contains("tai nghe") || message.contains("tìm")) {
+        String keyword = extractProductKeyword(message);
+        if (keyword != null
+                || message.contains("sản phẩm") || message.contains("product") || message.contains("laptop")
+                || message.contains("điện thoại") || message.contains("tai nghe") || message.contains("tìm")
+                || message.contains("mua") || message.contains("cần") || message.contains("giá") || message.contains("bán")) {
             try {
-                // Extract keyword for search
-                String keyword = extractProductKeyword(message);
                 Map<String, Object> products;
                 if (keyword != null) {
                     products = productServiceClient.searchProducts(keyword, 0, 5);
@@ -127,7 +133,7 @@ public class AiChatService {
                             context.append(String.format("- %s | Giá: %s VNĐ | Mô tả: %s\n",
                                     p.getOrDefault("name", ""),
                                     p.getOrDefault("price", ""),
-                                    String.valueOf(p.getOrDefault("description", "")).substring(0, 
+                                    String.valueOf(p.getOrDefault("description", "")).substring(0,
                                             Math.min(50, String.valueOf(p.getOrDefault("description", "")).length()))));
                         }
                     }
@@ -141,7 +147,12 @@ public class AiChatService {
     }
 
     private String extractProductKeyword(String message) {
-        String[] keywords = {"laptop", "điện thoại", "phone", "tai nghe", "tablet", "iphone", "samsung", "macbook", "airpod"};
+        String[] keywords = {
+            "laptop", "điện thoại", "phone", "tai nghe", "tablet", "máy tính",
+            "iphone", "samsung", "macbook", "airpod", "ipad", "xiaomi", "oppo",
+            "dell", "hp", "asus", "lenovo", "acer", "sony", "logitech",
+            "bàn phím", "chuột", "sạc", "tai nghe"
+        };
         for (String kw : keywords) {
             if (message.contains(kw)) return kw;
         }
@@ -149,6 +160,18 @@ public class AiChatService {
     }
 
     private String callGemini(String userMessage, String sessionId, String contextData) {
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
+            throw new IllegalStateException("GEMINI_API_KEY is not configured in environment variables");
+        }
+
+        String key = geminiApiKey.trim();
+        if (key.startsWith("\"") && key.endsWith("\"")) {
+            key = key.substring(1, key.length() - 1);
+        } else if (key.startsWith("'") && key.endsWith("'")) {
+            key = key.substring(1, key.length() - 1);
+        }
+        key = key.trim();
+
         List<Map<String, Object>> contents = new ArrayList<>();
 
         // Add history
@@ -181,8 +204,9 @@ public class AiChatService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-        String url = GEMINI_URL + "?key=" + geminiApiKey;
+        String url = GEMINI_URL + "?key=" + key;
 
+        log.info("Calling Gemini API, key length={}", key.length());
         ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
 
         Map body = response.getBody();
@@ -200,43 +224,6 @@ public class AiChatService {
         }
 
         return text;
-    }
-
-    private ChatResponse buildFallbackResponse(String message, String sessionId, String contextData) {
-        String response;
-        // If we have real data from services, use it even without Gemini
-        if (!contextData.isBlank()) {
-            response = "Đây là thông tin tôi tìm được:\n" + contextData + "\nBạn cần hỗ trợ thêm gì không?";
-        } else {
-            response = getFallbackResponse(message);
-        }
-        return ChatResponse.builder()
-                .message(response)
-                .intent("fallback")
-                .confidence(0.5)
-                .timestamp(LocalDateTime.now())
-                .sessionId(sessionId)
-                .build();
-    }
-
-    private String getFallbackResponse(String message) {
-        String lower = message.toLowerCase();
-        if (lower.contains("hi") || lower.contains("hello") || lower.contains("chào")) {
-            return "Xin chào! Tôi là AI Assistant của TechShop. Tôi có thể giúp gì cho bạn?";
-        } else if (lower.contains("sản phẩm") || lower.contains("product")) {
-            return "Bạn có thể xem sản phẩm tại trang chủ. Bạn đang tìm loại sản phẩm nào?";
-        } else if (lower.contains("đơn hàng") || lower.contains("order")) {
-            return "Bạn có thể xem đơn hàng tại mục 'Đơn hàng của tôi' trên menu.";
-        } else if (lower.contains("giá") || lower.contains("price")) {
-            return "Giá sản phẩm được hiển thị trên trang chi tiết. Bạn muốn tìm sản phẩm nào?";
-        } else if (lower.contains("trả hàng") || lower.contains("return") || lower.contains("đổi")) {
-            return "TechShop hỗ trợ đổi trả trong 7 ngày. Vui lòng liên hệ hotline 1900-xxxx.";
-        } else if (lower.contains("thanh toán") || lower.contains("payment")) {
-            return "Chúng tôi hỗ trợ thanh toán qua VNPay và COD.";
-        } else if (lower.contains("giao hàng") || lower.contains("ship")) {
-            return "Giao hàng từ 2-5 ngày. Nội thành HCM/HN giao trong 1-2 ngày.";
-        }
-        return "Tôi có thể giúp bạn: tìm sản phẩm, kiểm tra đơn hàng, tư vấn mua hàng. Bạn cần gì?";
     }
 
     public void clearHistory(String sessionId) {

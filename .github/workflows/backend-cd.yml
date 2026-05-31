@@ -1,0 +1,102 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# TechShop — Backend CD (Continuous Deployment)
+# Tự động deploy lên EC2 sau khi CI build xanh.
+#
+# Flow: CI xanh → SSH vào EC2 → git pull → docker compose up --build
+#
+# Secrets cần thiết (GitHub → Settings → Secrets → Actions):
+#   - EC2_HOST:        IP public của EC2 (VD: 54.123.45.67)
+#   - EC2_USER:        SSH username (thường là: ubuntu)
+#   - EC2_SSH_KEY:     Nội dung file .pem (private key)
+#   - JWT_SECRET:      JWT secret key
+#   - CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+#   - VNPAY_TMN_CODE, VNPAY_HASH_SECRET
+#   - MAIL_USERNAME, MAIL_PASSWORD
+#   - GEMINI_API_KEY
+# ═══════════════════════════════════════════════════════════════════════════
+name: Backend CD
+
+on:
+  # Tự động chạy sau khi CI thành công
+  workflow_run:
+    workflows: ["Backend CI"]
+    types: [completed]
+    branches: [main, master]
+
+  # Trigger thủ công
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Môi trường deploy (staging / production)"
+        required: false
+        default: "production"
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+
+    # Chỉ deploy khi CI thành công hoặc trigger thủ công
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          VNPAY_TMN_CODE: ${{ secrets.VNPAY_TMN_CODE }}
+          VNPAY_HASH_SECRET: ${{ secrets.VNPAY_HASH_SECRET }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 600s
+          envs: JWT_SECRET,CLOUDINARY_CLOUD_NAME,CLOUDINARY_API_KEY,CLOUDINARY_API_SECRET,VNPAY_TMN_CODE,VNPAY_HASH_SECRET,MAIL_USERNAME,MAIL_PASSWORD,GEMINI_API_KEY
+          script: |
+            echo "🚀 Deploying TechShop Backend..."
+
+            # Di chuyển vào thư mục project
+            cd ~/TechShopProject || exit 1
+
+            echo "📥 Pulling latest code..."
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
+
+            echo "📝 Updating .env file..."
+            printf "JWT_SECRET=%s\n" "$JWT_SECRET" > .env
+            printf "CLOUDINARY_CLOUD_NAME=%s\n" "$CLOUDINARY_CLOUD_NAME" >> .env
+            printf "CLOUDINARY_API_KEY=%s\n" "$CLOUDINARY_API_KEY" >> .env
+            printf "CLOUDINARY_API_SECRET=%s\n" "$CLOUDINARY_API_SECRET" >> .env
+            printf "VNPAY_TMN_CODE=%s\n" "$VNPAY_TMN_CODE" >> .env
+            printf "VNPAY_HASH_SECRET=%s\n" "$VNPAY_HASH_SECRET" >> .env
+            printf "MAIL_USERNAME=%s\n" "$MAIL_USERNAME" >> .env
+            printf "MAIL_PASSWORD=%s\n" "$MAIL_PASSWORD" >> .env
+            printf "GEMINI_API_KEY=%s\n" "$GEMINI_API_KEY" >> .env
+            printf "PAYMENT_RETURN_URL=https://tech-shop-project-delta.vercel.app/payment-result\n" >> .env
+
+            echo "🔍 Verifying .env (key names only)..."
+            grep -v '=' .env || cat .env | cut -d= -f1
+
+            echo "🐳 Building & restarting services..."
+            docker compose --env-file .env up -d --build --remove-orphans
+
+            echo "⏳ Waiting for services to be healthy (60s)..."
+            sleep 60
+
+            echo "🩺 Health check..."
+            docker compose ps
+
+            echo "📊 Checking key services..."
+            curl -sf http://localhost:8761/actuator/health && echo "✅ Discovery OK" || echo "❌ Discovery FAILED"
+            curl -sf http://localhost:8080/actuator/health && echo "✅ Gateway OK"   || echo "❌ Gateway FAILED"
+
+            echo "✅ Deploy complete!"
