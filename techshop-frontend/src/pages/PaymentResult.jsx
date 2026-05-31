@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle, XCircle, Loader } from "lucide-react";
-import axios from "axios";
+import axiosClient from "../api/axios";
 
 export default function PaymentResult() {
   const [searchParams] = useSearchParams();
@@ -20,8 +20,8 @@ export default function PaymentResult() {
 
         console.log("VNPay callback params:", params);
 
-        // Gọi backend để verify payment
-        const response = await axios.get("http://localhost:8085/payments/vnpay/callback", {
+        // Gọi backend để verify payment (sử dụng axiosClient để tự động lấy baseURL từ env)
+        const response = await axiosClient.get("/payments/vnpay/callback", {
           params: params
         });
 
