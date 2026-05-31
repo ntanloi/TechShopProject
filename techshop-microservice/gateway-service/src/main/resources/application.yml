@@ -30,6 +30,9 @@ spring:
 
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+        # Preserve custom response headers từ upstream (X-Instance-ID, X-Served-By)
+        # để k6/client biết request được xử lý bởi instance nào khi scale
+        - PreserveHostHeader
 
       routes:
         # ======================================================
@@ -43,9 +46,9 @@ spring:
             - StripPrefix=1
             - name: RequestRateLimiter
               args:
-                redis-rate-limiter.replenishRate: 10  # tokens per second
-                redis-rate-limiter.burstCapacity: 20  # max burst
-                redis-rate-limiter.requestedTokens: 1 # tokens per request
+                redis-rate-limiter.replenishRate: 500   # tăng cho scalability test
+                redis-rate-limiter.burstCapacity: 1000
+                redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@ipKeyResolver}"
 
         - id: user-service
@@ -72,8 +75,8 @@ spring:
             - StripPrefix=1
             - name: RequestRateLimiter
               args:
-                redis-rate-limiter.replenishRate: 20
-                redis-rate-limiter.burstCapacity: 40
+                redis-rate-limiter.replenishRate: 2000  # tăng cao cho scalability test (1000 VUs)
+                redis-rate-limiter.burstCapacity: 5000
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@ipKeyResolver}"
             - name: CircuitBreaker
@@ -106,8 +109,8 @@ spring:
             - StripPrefix=1
             - name: RequestRateLimiter
               args:
-                redis-rate-limiter.replenishRate: 5
-                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.replenishRate: 500   # tăng cho scalability test
+                redis-rate-limiter.burstCapacity: 1000
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@ipKeyResolver}"
             - name: CircuitBreaker
@@ -140,8 +143,8 @@ spring:
             - StripPrefix=1
             - name: RequestRateLimiter
               args:
-                redis-rate-limiter.replenishRate: 10
-                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.replenishRate: 500   # tăng cho scalability test
+                redis-rate-limiter.burstCapacity: 1000
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@ipKeyResolver}"
             - name: CircuitBreaker

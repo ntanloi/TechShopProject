@@ -25,6 +25,9 @@ public class SecurityConfig {
                 .cors(cors -> {})
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        // Actuator health check - phải permit để Docker health check hoạt động
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+
                         // Public endpoints - GET only
                         .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/categories/**").permitAll()
