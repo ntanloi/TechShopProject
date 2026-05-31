@@ -6,16 +6,19 @@ echo "Starting Redis server..."
 redis-server /data/redis.conf &
 REDIS_PID=$!
 
-# Wait for Redis to be ready
-sleep 2
-echo "Redis server started (PID: $REDIS_PID)"
+# Wait for Redis to be actually ready (ping loop instead of fixed sleep)
+echo "Waiting for Redis to be ready..."
+until redis-cli ping 2>/dev/null | grep -q PONG; do
+    sleep 1
+done
+echo "Redis server ready (PID: $REDIS_PID)"
 
-# Start monitoring cache operations
+# Start monitoring cache operations in background (non-blocking)
 echo "Starting cache monitor..."
 echo "Listening for product cache operations..."
 echo ""
 
-redis-cli MONITOR | while IFS= read -r line; do
+redis-cli MONITOR 2>/dev/null | while IFS= read -r line; do
     # Check if line contains products::
     if echo "$line" | grep -q "products::"; then
         timestamp=$(date '+%H:%M:%S')
@@ -35,5 +38,5 @@ redis-cli MONITOR | while IFS= read -r line; do
     fi
 done &
 
-# Wait for Redis to exit
+# Wait for Redis process to exit
 wait $REDIS_PID

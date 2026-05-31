@@ -1,0 +1,21 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# docker-compose.local.yml — Override cho LOCAL DEV
+#
+# Chạy: docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+# Stop: docker compose -f docker-compose.yml -f docker-compose.local.yml down
+#
+# Chỉ chứa phần khác biệt so với docker-compose.yml gốc.
+# KHÔNG ảnh hưởng khi chạy docker compose up -d bình thường (production/CI).
+# Frontend chạy riêng: cd techshop-frontend && npm run dev
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+  # PAYMENT_RETURN_URL trỏ về Vite dev server thay vì Vercel
+  order-service:
+    environment:
+      - PAYMENT_RETURN_URL=http://localhost:5173/payment-result
+
+  # Thêm CORS cho localhost:5173
+  gateway-service:
+    environment:
+      - CORS_ALLOWED_ORIGINS=http://localhost:5173

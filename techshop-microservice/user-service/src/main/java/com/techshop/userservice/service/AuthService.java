@@ -3,6 +3,7 @@ package com.techshop.userservice.service;
 import com.techshop.userservice.dto.AuthResponse;
 import com.techshop.userservice.dto.LoginRequest;
 import com.techshop.userservice.dto.RegisterRequest;
+import com.techshop.userservice.event.UserRegisteredEvent;
 import com.techshop.userservice.model.Role;
 import com.techshop.userservice.model.User;
 import com.techshop.userservice.repository.UserRepository;
@@ -13,7 +14,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import com.techshop.userservice.client.NotificationClient;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
-    private final NotificationClient notificationClient;
+    private final UserEventProducer userEventProducer;
 
     public AuthResponse register(RegisterRequest request) {
         log.info("Register request: {}", request.getEmail());
@@ -44,13 +44,16 @@ public class AuthService {
         user = userRepository.save(user);
         log.info("User registered: {}", user.getEmail());
 
-        // Gửi email chào mừng (Async-like via try-catch)
-        try {
-            log.info("Sending welcome email to: {}", user.getEmail());
-            notificationClient.sendWelcomeEmail(user.getEmail(), user.getFullName());
-        } catch (Exception e) {
-            log.error("Failed to send welcome email for {}: {}", user.getEmail(), e.getMessage());
-        }
+        // Bắn Kafka event → notification-service sẽ consume và gửi email Welcome
+        userEventProducer.publishUserRegistered(
+                UserRegisteredEvent.builder()
+                        .userId(user.getId())
+                        .email(user.getEmail())
+                        .fullName(user.getFullName())
+                        .build()
+        );
+
+        // Notification Service sẽ consume event này và gửi email Welcome.
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name(), user.getId());
 
