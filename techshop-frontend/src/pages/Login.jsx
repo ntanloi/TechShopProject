@@ -33,8 +33,22 @@ export default function Login() {
       const res = await userApi.login({ email, password });
       const { token, role, fullName, id, message } = res.data;
 
-      // Lưu vào context ngay với đầy đủ thông tin từ response
-      login(token, { id, email, role, fullName });
+      // Lưu token trước để có thể gọi API
+      localStorage.setItem("token", token);
+
+      // Gọi API để lấy đầy đủ thông tin user bao gồm phone và address
+      const userRes = await userApi.getMe();
+      const fullUserData = userRes.data;
+
+      // Lưu vào context với đầy đủ thông tin
+      login(token, { 
+        id: fullUserData.id || id, 
+        email: fullUserData.email || email, 
+        role: fullUserData.role || role, 
+        fullName: fullUserData.fullName || fullName,
+        phone: fullUserData.phone,
+        address: fullUserData.address
+      });
 
       toast.success("Đăng nhập thành công!", { theme: "colored" });
 

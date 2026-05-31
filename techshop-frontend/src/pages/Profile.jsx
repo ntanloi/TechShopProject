@@ -8,7 +8,6 @@ export default function Profile() {
   const { user, setUser } = useAuth();
   const [form, setForm] = useState({
     fullName: user?.fullName || "",
-    phone: user?.phone || "",
     address: user?.address || "",
   });
   const [loading, setLoading] = useState(false);
@@ -65,21 +64,36 @@ export default function Profile() {
             </div>
           </div>
 
-          {[
-            { name: "fullName", label: "Họ và tên", icon: User, placeholder: "Nguyễn Văn A" },
-            { name: "phone", label: "Số điện thoại", icon: Phone, placeholder: "0901234567" },
-            { name: "address", label: "Địa chỉ", icon: MapPin, placeholder: "Địa chỉ của bạn" },
-          ].map(({ name, label, icon: Icon, placeholder }) => (
-            <div key={name}>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-              <div className="relative">
-                <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input type="text" name={name} value={form[name]} onChange={handleChange}
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition"
-                  placeholder={placeholder} />
-              </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Họ và tên</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input type="text" name="fullName" value={form.fullName} onChange={handleChange}
+                className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition"
+                placeholder="Nguyễn Văn A" />
             </div>
-          ))}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Số điện thoại</label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input type="text" value={user?.phone || ""} disabled
+                className="w-full pl-11 pr-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-500 cursor-not-allowed"
+                placeholder="Chưa cập nhật" />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Số điện thoại không thể thay đổi sau khi đăng ký</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Địa chỉ</label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input type="text" name="address" value={form.address} onChange={handleChange}
+                className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:bg-white transition"
+                placeholder="Địa chỉ của bạn" />
+            </div>
+          </div>
 
           <button type="submit" disabled={loading}
             className={`w-full py-3 font-semibold text-white rounded-xl transition flex items-center justify-center gap-2 ${
