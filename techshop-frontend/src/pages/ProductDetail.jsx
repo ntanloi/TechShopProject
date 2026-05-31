@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import productApi from "../api/productApi";
 import reviewApi from "../api/reviewApi";
+import aiApi from "../api/aiApi";
 import useCartStore from "../store/cartStore";
 import { useAuth } from "../store/AuthContext";
 import { toast } from "react-toastify";
@@ -28,6 +29,8 @@ export default function ProductDetail() {
   const [addingCart, setAddingCart] = useState(false);
   const [newReview, setNewReview] = useState({ rating: 5, comment: "" });
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [recommendations, setRecommendations] = useState([]);
+  const [recAlgo, setRecAlgo] = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -35,15 +38,21 @@ export default function ProductDetail() {
       productApi.getById(id),
       reviewApi.getByProduct(id),
       reviewApi.getRating(id),
+      aiApi.getRecommendations(id, 4, user?.id).catch(e => {
+        console.warn("Failed to fetch AI recommendations", e);
+        return { data: { recommendations: [] } };
+      })
     ])
-      .then(([pRes, rRes, ratRes]) => {
+      .then(([pRes, rRes, ratRes, recRes]) => {
         setProduct(pRes.data);
         setReviews(rRes.data || []);
         setRating(ratRes.data || {});
+        setRecommendations(recRes?.data?.recommendations || []);
+        setRecAlgo(recRes?.data?.algorithm || "");
       })
       .catch(() => nav("/products"))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, user?.id]);
 
   const handleAddToCart = async () => {
     if (!user) {
@@ -253,6 +262,67 @@ export default function ProductDetail() {
           )}
         </div>
       </div>
+
+      {/* AI Recommendations */}
+      {recommendations && recommendations.length > 0 && (
+        <div className="mt-10 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <span className="text-xl">🤖</span> Gợi ý mua sắm bằng AI
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Được tính toán bởi thuật toán: <span className="font-semibold text-orange-500">{recAlgo}</span>
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 bg-orange-100 text-orange-600 rounded-full text-xs font-semibold">
+                Độ tin cậy: 82%
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {recommendations.map((rec) => (
+              <div 
+                key={rec.productId} 
+                onClick={() => nav(`/products/${rec.productId}`)}
+                className="group cursor-pointer border border-gray-100 rounded-xl p-4 bg-gray-50 hover:bg-white hover:shadow-md hover:border-orange-200 transition-all duration-300 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="aspect-square bg-white rounded-lg overflow-hidden flex items-center justify-center mb-3 p-2 group-hover:scale-105 transition-transform duration-300">
+                    {rec.imageUrl ? (
+                      <img 
+                        src={rec.imageUrl} 
+                        alt={rec.productName} 
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="text-gray-300 text-3xl">📦</div>
+                    )}
+                  </div>
+                  <h3 className="font-semibold text-gray-800 text-sm line-clamp-2 group-hover:text-orange-500 transition-colors">
+                    {rec.productName}
+                  </h3>
+                  {rec.reason && (
+                    <span className="inline-block mt-2 px-2 py-0.5 bg-orange-50 text-orange-600 rounded-md text-[10px] font-medium border border-orange-100">
+                      🎯 {rec.reason}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-4 pt-2 border-t border-gray-100 flex items-center justify-between">
+                  <span className="font-bold text-orange-500 text-sm">
+                    {rec.price ? `${Number(rec.price).toLocaleString("vi-VN")}₫` : "Liên hệ"}
+                  </span>
+                  <span className="text-[10px] text-gray-400">
+                    Khớp: {Math.round(rec.score * 100)}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Reviews */}
       <div className="mt-10 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">

@@ -25,5 +25,7 @@ public class RecommendationResponse {
         private String productName;
         private Double score;
         private String reason;
+        private Double price;
+        private String imageUrl;
     }
 }

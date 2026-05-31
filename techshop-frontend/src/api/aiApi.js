@@ -8,6 +8,13 @@ const aiApi = {
       userId: userId ? String(userId) : null,
     });
   },
+  getRecommendations(productId, limit = 4, userId = null) {
+    return axiosClient.post("/api/ai/recommendations", {
+      productId: Number(productId),
+      limit,
+      userId: userId ? Number(userId) : null,
+    });
+  },
 };
 
 export default aiApi;
