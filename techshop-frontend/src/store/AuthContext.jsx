@@ -11,11 +11,13 @@ export const AuthProvider = ({ children }) => {
     const role = localStorage.getItem("role");
     const email = localStorage.getItem("email");
     const fullName = localStorage.getItem("fullName");
+    const phone = localStorage.getItem("phone");
+    const address = localStorage.getItem("address");
     const id = localStorage.getItem("userId");
 
     if (token && role) {
       // Khôi phục user từ localStorage, không cần gọi API
-      setUser({ token, role, email, fullName, id: id ? Number(id) : null });
+      setUser({ token, role, email, fullName, phone, address, id: id ? Number(id) : null });
     }
     setLoading(false);
   }, []);
@@ -27,6 +29,8 @@ export const AuthProvider = ({ children }) => {
     if (userData?.role) localStorage.setItem("role", userData.role);
     if (userData?.email) localStorage.setItem("email", userData.email);
     if (userData?.fullName) localStorage.setItem("fullName", userData.fullName);
+    if (userData?.phone) localStorage.setItem("phone", userData.phone);
+    if (userData?.address) localStorage.setItem("address", userData.address);
     if (userData?.id) localStorage.setItem("userId", String(userData.id));
     // Set vào state
     setUser({ token, ...userData });
@@ -37,6 +41,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("role");
     localStorage.removeItem("email");
     localStorage.removeItem("fullName");
+    localStorage.removeItem("phone");
+    localStorage.removeItem("address");
     localStorage.removeItem("userId");
     setUser(null);
   };
