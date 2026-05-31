@@ -13,6 +13,7 @@
  *
  * Run:
  * k6 run k6-tests/test-client-rate-limiter.js
+ * "C:\Program Files\k6\k6.exe" run k6-tests/test-client-rate-limiter.js
  * k6 run -e BASE_URL=http://localhost:8080 k6-tests/test-client-rate-limiter.js
  */
 
