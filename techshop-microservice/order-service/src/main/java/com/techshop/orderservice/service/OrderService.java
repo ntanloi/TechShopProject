@@ -2,6 +2,7 @@ package com.techshop.orderservice.service;
 
 import com.techshop.orderservice.client.InventoryClient;
 import com.techshop.orderservice.client.PaymentClient;
+import com.techshop.orderservice.config.KafkaTopicConstants;
 import com.techshop.orderservice.dto.*;
 import com.techshop.orderservice.event.OrderItemEvent;
 import com.techshop.orderservice.event.OrderPlacedEvent;
@@ -50,8 +51,10 @@ public class OrderService {
     private final InventoryClient inventoryClient;
     private final PaymentClient paymentClient;
 
-    // Kafka producer để bắn event bất đồng bộ
-    private final OrderEventProducer orderEventProducer;
+    // Outbox service: lưu event vào bảng outbox TRONG CÙNG transaction với Order.
+    // OutboxPublisher (scheduler) sẽ publish lên Kafka sau đó.
+    // → Đảm bảo không mất event ngay cả khi Kafka down lúc tạo đơn.
+    private final OutboxService outboxService;
 
     @Value("${payment.return-url:http://localhost:3000/payment-success}")
     private String paymentReturnUrl;
@@ -328,8 +331,15 @@ public class OrderService {
                 .items(itemEvents)
                 .build();
 
-        // Bắn event (bất đồng bộ - lỗi không ảnh hưởng đến response trả về)
-        orderEventProducer.publishOrderPlaced(orderPlacedEvent);
+        // Bắn event (qua outbox - cùng transaction với việc tạo Order ở trên)
+        outboxService.saveEvent(
+                "Order",
+                finalOrder.getOrderCode(),
+                "OrderPlaced",
+                KafkaTopicConstants.ORDER_PLACED_TOPIC,
+                finalOrder.getOrderCode(),  // partition key = orderCode
+                orderPlacedEvent
+        );
 
         // ─────────────────────────────────────────────
         // BƯỚC 5: Tạo Payment URL (synchronous) - chỉ cho thanh toán online

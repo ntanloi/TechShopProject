@@ -1,5 +1,6 @@
 package com.techshop.userservice.service;
 
+import com.techshop.userservice.config.KafkaTopicConstants;
 import com.techshop.userservice.dto.AuthResponse;
 import com.techshop.userservice.dto.LoginRequest;
 import com.techshop.userservice.dto.RegisterRequest;
@@ -13,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -23,8 +25,13 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
-    private final UserEventProducer userEventProducer;
 
+    // Outbox service: lưu event vào bảng outbox cùng transaction với việc tạo User.
+    // OutboxPublisher (scheduler) sẽ publish lên Kafka sau đó.
+    // → Đảm bảo email Welcome luôn được gửi, dù Kafka có tạm thời down.
+    private final OutboxService outboxService;
+
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
         log.info("Register request: {}", request.getEmail());
 
@@ -44,16 +51,22 @@ public class AuthService {
         user = userRepository.save(user);
         log.info("User registered: {}", user.getEmail());
 
-        // Bắn Kafka event → notification-service sẽ consume và gửi email Welcome
-        userEventProducer.publishUserRegistered(
-                UserRegisteredEvent.builder()
-                        .userId(user.getId())
-                        .email(user.getEmail())
-                        .fullName(user.getFullName())
-                        .build()
-        );
+        // Lưu UserRegisteredEvent vào OUTBOX (cùng transaction với việc save User).
+        // OutboxPublisher sẽ publish lên Kafka sau, không bị mất nếu Kafka down.
+        UserRegisteredEvent event = UserRegisteredEvent.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .build();
 
-        // Notification Service sẽ consume event này và gửi email Welcome.
+        outboxService.saveEvent(
+                "User",
+                String.valueOf(user.getId()),
+                "UserRegistered",
+                KafkaTopicConstants.USER_REGISTERED_TOPIC,
+                String.valueOf(user.getId()),  // partition key = userId
+                event
+        );
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name(), user.getId());
 
