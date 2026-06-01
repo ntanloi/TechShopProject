@@ -111,27 +111,45 @@ jobs:
             docker compose pull --ignore-pull-failures || true
             docker compose up -d --build --remove-orphans
 
-            # ── 6. Chờ services khởi động ──────────────────────────────────
-            echo "⏳ Waiting 90s for services to start..."
-            sleep 90
+            # ── 6. Chờ critical services khởi động (Discovery trước) ─────
+            echo "⏳ Waiting for Discovery Service to be ready (max 3 min)..."
+            for i in $(seq 1 18); do
+              if curl -sf --max-time 5 "http://localhost:8761/actuator/health" > /dev/null 2>&1; then
+                echo "  ✅ Discovery is up (${i}0s)"
+                break
+              fi
+              echo "  ⏳ Attempt $i/18 — waiting 10s..."
+              sleep 10
+            done
+
+            echo "⏳ Waiting additional 120s for remaining services..."
+            sleep 120
 
             # ── 7. Health checks ───────────────────────────────────────────
             echo "🩺 ===== Health Checks ====="
             FAILED=0
+            CRITICAL_FAILED=0
 
             check_health() {
               local name=$1
               local url=$2
+              local critical=${3:-false}
               if curl -sf --max-time 10 "$url" > /dev/null 2>&1; then
                 echo "  ✅ $name"
               else
                 echo "  ❌ $name — $url"
                 FAILED=$((FAILED + 1))
+                if [ "$critical" = "true" ]; then
+                  CRITICAL_FAILED=$((CRITICAL_FAILED + 1))
+                fi
               fi
             }
 
-            check_health "Discovery Service  (8761)" "http://localhost:8761/actuator/health"
-            check_health "Gateway Service    (8080)" "http://localhost:8080/actuator/health"
+            # Critical: nếu 2 service này fail thì toàn bộ hệ thống không dùng được
+            check_health "Discovery Service  (8761)" "http://localhost:8761/actuator/health" "true"
+            check_health "Gateway Service    (8080)" "http://localhost:8080/actuator/health" "true"
+
+            # Non-critical: có thể vẫn đang khởi động
             check_health "User Service       (8081)" "http://localhost:8081/actuator/health"
             check_health "Product Service    (8082)" "http://localhost:8082/actuator/health"
             check_health "Order Service      (8083)" "http://localhost:8083/actuator/health"
@@ -146,13 +164,13 @@ jobs:
             echo "📊 Container status:"
             docker compose ps
 
-            # ── 8. Rollback nếu critical services fail ─────────────────────
-            if [ $FAILED -gt 3 ]; then
+            # ── 8. Rollback chỉ khi critical services fail ─────────────────
+            if [ $CRITICAL_FAILED -gt 0 ]; then
               echo ""
-              echo "🔴 Too many services failed ($FAILED). Rolling back to $PREV_COMMIT..."
+              echo "🔴 Critical service(s) failed ($CRITICAL_FAILED). Rolling back to $PREV_COMMIT..."
               git checkout "$PREV_COMMIT"
               docker compose up -d --build --remove-orphans
-              echo "⚠️  Rolled back. Please check logs: docker compose logs"
+              echo "⚠️  Rolled back. Check logs: docker compose logs discovery-service gateway-service"
               exit 1
             fi
 
@@ -160,6 +178,6 @@ jobs:
             if [ $FAILED -eq 0 ]; then
               echo "🎉 Deploy complete! All services healthy."
             else
-              echo "⚠️  Deploy complete with $FAILED service(s) not yet healthy."
-              echo "    They may still be starting. Check: docker compose logs <service>"
+              echo "⚠️  Deploy complete. $FAILED non-critical service(s) still starting up."
+              echo "    Monitor with: docker compose logs -f"
             fi
