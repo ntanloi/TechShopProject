@@ -2,7 +2,7 @@
  * Client-side Rate Limiter
  * Implements Fault Tolerance requirement: Rate Limiter client (API call 1 service)
  * 
- * Limits: 20 requests per minute per endpoint
+ * Limits: 50 requests per minute per endpoint
  */
 
 class RateLimiter {
@@ -108,6 +108,6 @@ class RateLimiter {
 }
 
 // Create singleton instance
-const rateLimiter = new RateLimiter(20, 60000); // 20 requests per minute
+const rateLimiter = new RateLimiter(50, 60000); // 50 requests per minute
 
 export default rateLimiter;

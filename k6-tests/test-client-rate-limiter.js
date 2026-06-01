@@ -29,7 +29,7 @@ const blockedRate = new Rate("blocked_rate");
 
 // Configuration
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8080";
-const CLIENT_MAX_REQUESTS = 20;
+const CLIENT_MAX_REQUESTS = 50;
 const CLIENT_WINDOW_MS = 60000; // 60 seconds
 
 // Chạy tuần tự 1 VU để demo rõ ràng flow
@@ -144,17 +144,17 @@ function sendRequest(endpoint, requestNum, phase) {
 
 export default function () {
   console.log("═".repeat(90));
-  console.log("📋 CLIENT RATE LIMITER TEST - Mô phỏng logic frontend (20 req/min/endpoint)");
+  console.log("📋 CLIENT RATE LIMITER TEST - Mô phỏng logic frontend (50 req/min/endpoint)");
   console.log("═".repeat(90));
 
   // ============================================================
-  // PHASE 1: Gửi 20 requests đến /api/products → tất cả SUCCESS
+  // PHASE 1: Gửi 50 requests đến /api/products → tất cả SUCCESS
   // ============================================================
   console.log("\n" + "─".repeat(90));
-  console.log("▶ PHASE 1: Gửi 20 requests đến /api/products (trong limit)");
+  console.log("▶ PHASE 1: Gửi 50 requests đến /api/products (trong limit)");
   console.log("─".repeat(90));
 
-  for (let i = 1; i <= 20; i++) {
+  for (let i = 1; i <= 50; i++) {
     sendRequest("/api/products", i, "PHASE 1");
     sleep(0.2);
   }
@@ -166,7 +166,7 @@ export default function () {
   console.log("▶ PHASE 2: Gửi thêm 5 requests đến /api/products (vượt limit → bị BLOCK)");
   console.log("─".repeat(90));
 
-  for (let i = 21; i <= 25; i++) {
+  for (let i = 51; i <= 55; i++) {
     sendRequest("/api/products", i, "PHASE 2");
     sleep(0.3);
   }
@@ -190,7 +190,7 @@ export default function () {
   console.log("▶ PHASE 4: Gửi lại 3 requests đến /api/products (vẫn bị BLOCK)");
   console.log("─".repeat(90));
 
-  for (let i = 26; i <= 28; i++) {
+  for (let i = 56; i <= 58; i++) {
     sendRequest("/api/products", i, "PHASE 4");
     sleep(0.3);
   }
@@ -229,7 +229,7 @@ export default function () {
   console.log("\n" + "═".repeat(90));
   console.log("📊 KẾT LUẬN:");
   console.log("═".repeat(90));
-  console.log("• /api/products: 20 req thành công → request thứ 21+ bị CLIENT chặn");
+  console.log("• /api/products: 50 req thành công → request thứ 51+ bị CLIENT chặn");
   console.log("• /api/orders:   Vẫn gửi được bình thường (endpoint riêng, limit riêng)");
   console.log("• /api/products: Gửi lại vẫn bị block (chưa hết 60s window)");
   console.log("• /api/products: Sau 60s → window reset → gửi lại được ✅");
@@ -258,7 +258,7 @@ function textSummary(data) {
       ❌ Client Blocked (not sent): ${blocked}
 
     Behavior Verified:
-      ✓ /api/products blocked after 20 requests
+      ✓ /api/products blocked after 50 requests
       ✓ /api/orders still works while products is blocked
       ✓ /api/products stays blocked until window expires
       ✓ /api/products recovers after 60s window reset
