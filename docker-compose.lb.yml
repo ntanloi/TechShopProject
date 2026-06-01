@@ -1,0 +1,80 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Docker Compose override: NGINX Load Balancer + scale product-service
+# ──────────────────────────────────────────────────────────────────────────────
+# MỤC ĐÍCH: test khả năng chịu tải khi scale + LB chia đều, KHÔNG vướng rate limiter.
+#
+# Luồng:  k6 → nginx-lb (cổng 8090, KHÔNG rate limit) → N x product-service
+#
+# ──────────────────────────────────────────────────────────────────────────────
+# SO SÁNH CÔNG BẰNG 1 vs 2 INSTANCE (rất quan trọng!):
+#   • CẢ HAI lần test PHẢI dùng CÙNG file này (docker-compose.lb.yml) để MỖI
+#     instance đều bị giới hạn GIỐNG NHAU (mặc định: 1 core + 1g RAM / instance).
+#   • CHỈ thay đổi số lượng instance bằng --scale. Khi đó:
+#       - 1 instance  → tổng 1 core / 1g
+#       - 2 instance  → tổng 2 core / 2g  → đây mới là "thêm năng lực" thật.
+#   • TUYỆT ĐỐI KHÔNG test 1-instance bằng docker-compose.yml gốc (không giới hạn
+#     CPU/RAM) rồi đem so với 2-instance có giới hạn — đó là so sánh SAI LỆCH.
+#
+#   # Bước 1 — chạy với 1 instance (baseline), qua nginx-lb:
+#   docker-compose -f docker-compose.yml -f docker-compose.lb.yml \
+#     up -d --scale product-service=1
+#   k6 run k6-tests/test-loadbalancer-product.js     # BASE_URL mặc định = :8090
+#
+#   # Bước 2 — chạy với 2 instance (GIỮ NGUYÊN mọi thứ khác), qua nginx-lb:
+#   docker-compose -f docker-compose.yml -f docker-compose.lb.yml \
+#     up -d --scale product-service=2
+#   k6 run k6-tests/test-loadbalancer-product.js
+#
+#   → So 2 lần chạy này: cùng đường đi, cùng giới hạn/instance, chỉ khác số instance.
+#
+# TÙY CHỈNH GIỚI HẠN (phải GIỐNG NHAU ở cả 2 lần để công bằng):
+#   PRODUCT_CPUS=2 PRODUCT_MEM=2g docker-compose -f docker-compose.yml \
+#     -f docker-compose.lb.yml up -d --scale product-service=2
+#
+# DỌN DẸP (tắt nginx-lb, đưa product về 1 instance KHÔNG giới hạn như ban đầu):
+#   docker-compose -f docker-compose.yml -f docker-compose.lb.yml stop nginx-lb
+#   docker-compose -f docker-compose.yml up -d --scale product-service=1
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+  # ==========================================================================
+  # product-service: bỏ container_name cố định + cổng động để chạy nhiều replica
+  # ==========================================================================
+  product-service:
+    # Xóa container_name cố định (cần Docker Compose v2.13+ cho !reset).
+    container_name: !reset null
+    # Cổng host động: mỗi replica tự lấy 1 cổng, tránh đụng nhau.
+    ports: !override
+      - "8082"
+    # ── GIỚI HẠN TÀI NGUYÊN MỖI INSTANCE (chuẩn hóa để so sánh công bằng) ──
+    # Áp dụng GIỐNG NHAU cho mọi instance dù scale 1 hay 2. Mỗi instance thêm
+    # vào = thêm đúng 1 core + 1g → đo được đúng giá trị của horizontal scaling.
+    # Có thể override qua biến môi trường PRODUCT_CPUS / PRODUCT_MEM.
+    mem_limit: ${PRODUCT_MEM:-1g}
+    mem_reservation: ${PRODUCT_MEM:-1g}
+    cpus: ${PRODUCT_CPUS:-1.0}
+    restart: on-failure
+
+  # ==========================================================================
+  # nginx-lb: load balancer THUẦN, không rate limit, đứng trước product-service
+  # ==========================================================================
+  nginx-lb:
+    image: nginx:alpine
+    container_name: techshop-nginx-lb
+    ports:
+      - "8090:80"   # k6 bắn vào localhost:8090
+    volumes:
+      - ./nginx/nginx-lb-product.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - techshop-network
+    depends_on:
+      - product-service
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/lb-health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  techshop-network:
+    driver: bridge

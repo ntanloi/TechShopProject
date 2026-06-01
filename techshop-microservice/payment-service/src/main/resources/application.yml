@@ -16,6 +16,31 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
+        max.block.ms: 5000
+
+# Outbox Pattern config
+outbox:
+  publisher:
+    # Khoảng thời gian giữa 2 lần quét outbox (ms)
+    poll-interval-ms: 5000
+    # Số event xử lý mỗi batch
+    batch-size: 50
+    # Số lần retry tối đa trước khi đánh dấu FAILED
+    max-retries: 10
+    # Timeout chờ Kafka ack mỗi event (giây)
+    kafka-timeout-seconds: 5
+  cleanup:
+    # Dọn dẹp event PUBLISHED cũ mỗi giờ (ms)
+    interval-ms: 3600000
 
 eureka:
   client:
