@@ -2,6 +2,7 @@ package com.techshop.paymentservice.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techshop.paymentservice.config.KafkaTopicConstants;
 import com.techshop.paymentservice.dto.CreatePaymentRequest;
 import com.techshop.paymentservice.dto.PaymentResponse;
 import com.techshop.paymentservice.event.PaymentCompletedEvent;
@@ -44,8 +45,10 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final VNPayService vnPayService;
 
-    // Kafka producer để bắn event sau khi payment hoàn tất
-    private final PaymentEventProducer paymentEventProducer;
+    // Outbox service: lưu event vào bảng outbox TRONG CÙNG transaction với Payment.
+    // Một scheduler (OutboxPublisher) sẽ publish lên Kafka sau đó.
+    // → Đảm bảo không mất event kể cả khi Kafka down lúc thanh toán.
+    private final OutboxService outboxService;
 
     // ObjectMapper để serialize/deserialize items JSON
     private final ObjectMapper objectMapper;
@@ -211,8 +214,8 @@ public class PaymentService {
     // ──────────────────────────────────────────────────────────────
 
     /**
-     * Build và bắn PaymentCompletedEvent lên Kafka.
-     * Được gọi sau khi lưu payment thành công vào DB.
+     * Build PaymentCompletedEvent và lưu vào OUTBOX (cùng transaction với Payment).
+     * OutboxPublisher sẽ publish lên Kafka sau. Không bắn thẳng Kafka ở đây.
      */
     private void publishPaymentCompletedEvent(Payment payment) {
         PaymentCompletedEvent event = PaymentCompletedEvent.builder()
@@ -226,13 +229,20 @@ public class PaymentService {
                 .paymentMethod(payment.getMethod().name())
                 .build();
 
-        paymentEventProducer.publishPaymentCompleted(event);
+        outboxService.saveEvent(
+                "Payment",
+                payment.getOrderCode(),
+                "PaymentCompleted",
+                KafkaTopicConstants.PAYMENT_COMPLETED_TOPIC,
+                payment.getOrderCode(),   // partition key = orderCode để giữ thứ tự
+                event
+        );
     }
 
     /**
-     * Build và bắn PaymentFailedEvent lên Kafka.
-     * Trigger Saga rollback ở Order Service và Inventory Service.
+     * Build PaymentFailedEvent và lưu vào OUTBOX (cùng transaction với Payment).
      * Bao gồm danh sách items để Inventory Service tự động release stock.
+     * OutboxPublisher sẽ publish lên Kafka sau.
      */
     private void publishPaymentFailedEvent(Payment payment, String reason) {
         List<PaymentFailedEvent.OrderItemEvent> items = deserializeItems(payment.getItemsJson());
@@ -247,7 +257,14 @@ public class PaymentService {
                 .items(items)
                 .build();
 
-        paymentEventProducer.publishPaymentFailed(event);
+        outboxService.saveEvent(
+                "Payment",
+                payment.getOrderCode(),
+                "PaymentFailed",
+                KafkaTopicConstants.PAYMENT_FAILED_TOPIC,
+                payment.getOrderCode(),   // partition key = orderCode để giữ thứ tự
+                event
+        );
     }
 
     // ──────────────────────────────────────────────────────────────

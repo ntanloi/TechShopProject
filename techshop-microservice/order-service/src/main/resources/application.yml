@@ -24,7 +24,12 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
+        max.block.ms: 5000
     consumer:
       group-id: ${spring.application.name}-group
       auto-offset-reset: earliest
@@ -32,6 +37,16 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*"
+
+# Outbox Pattern config
+outbox:
+  publisher:
+    poll-interval-ms: 5000
+    batch-size: 50
+    max-retries: 10
+    kafka-timeout-seconds: 5
+  cleanup:
+    interval-ms: 3600000
 
 eureka:
   client:

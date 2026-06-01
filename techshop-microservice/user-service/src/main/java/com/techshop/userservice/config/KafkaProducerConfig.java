@@ -8,7 +8,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
-import org.springframework.kafka.support.serializer.JsonSerializer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,9 +15,14 @@ import java.util.Map;
 /**
  * Cấu hình Kafka Producer cho User Service.
  *
- * Tạo KafkaTemplate bean để UserEventProducer có thể inject và dùng.
- * Key: String (userId hoặc orderCode)
- * Value: Object (serialize thành JSON tự động)
+ * User Service dùng Transactional Outbox Pattern:
+ * - AuthService lưu UserRegisteredEvent (dạng JSON string) vào bảng outbox
+ * - OutboxPublisher đọc và publish JSON string đó lên Kafka
+ *
+ * Vì payload trong outbox ĐÃ là JSON string serialize sẵn,
+ * producer dùng StringSerializer (KHÔNG dùng JsonSerializer để tránh bọc 2 lớp JSON).
+ *
+ * Cấu hình độ tin cậy cao: acks=all, idempotence, retries.
  */
 @Configuration
 public class KafkaProducerConfig {
@@ -26,35 +30,25 @@ public class KafkaProducerConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    /**
-     * ProducerFactory với JsonSerializer cho value.
-     * Spring sẽ tự động serialize bất kỳ Object nào thành JSON
-     * khi gọi kafkaTemplate.send(...).
-     */
     @Bean
-    public ProducerFactory<String, Object> producerFactory() {
+    public ProducerFactory<String, String> producerFactory() {
         Map<String, Object> props = new HashMap<>();
-
-        // Địa chỉ Kafka broker
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-
-        // Serializer cho key (String) và value (Object → JSON)
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
 
-        // Không thêm type info header để giảm coupling với consumer
-        // Consumer sẽ tự map JSON vào đúng class dựa trên context
-        props.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
+        props.put(ProducerConfig.ACKS_CONFIG, "all");
+        props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        props.put(ProducerConfig.RETRIES_CONFIG, 3);
+        props.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, 5000);
+        props.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 10000);
+        props.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 5000);
 
         return new DefaultKafkaProducerFactory<>(props);
     }
 
-    /**
-     * KafkaTemplate - bean chính để gửi message lên Kafka.
-     * Được inject vào UserEventProducer.
-     */
     @Bean
-    public KafkaTemplate<String, Object> kafkaTemplate() {
+    public KafkaTemplate<String, String> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
 }
