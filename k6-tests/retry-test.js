@@ -44,7 +44,7 @@ function isCbOpen(res, duration) {
 function requestWithRetry(url, iter) {
     const start    = Date.now();
     const res      = http.get(url, {
-        timeout: '25s',  // đủ dài để gateway hoàn tất retry (3 × 5s backoff = ~13s)
+        timeout: '30s',  // đủ dài để gateway hoàn tất retry (3 × 5s backoff = ~13s)
     });
     const duration = Date.now() - start;
 
