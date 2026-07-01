@@ -19,7 +19,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Product> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
-    // Check SKU uniqueness
     boolean existsBySku(String sku);
     
     Product findBySku(String sku);

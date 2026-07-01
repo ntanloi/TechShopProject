@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:mysql://product-db:3306/techshop_productdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true
+    url: jdbc:mysql://mysql-product:3306/techshop_productdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=UTF-8
   # Redis Configuration for Docker
   data:
     redis:

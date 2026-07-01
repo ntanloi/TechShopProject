@@ -28,7 +28,6 @@ public class Product {
     private BigDecimal price;
 
     private BigDecimal salePrice;
-
     private String imageUrl;
     private String brand;
     private String sku;         // mã sản phẩm

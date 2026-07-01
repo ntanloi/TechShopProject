@@ -1,13 +1,13 @@
 package com.techshop.userservice.service;
 
 import com.techshop.userservice.dto.UpdateProfileRequest;
+import com.techshop.userservice.enums.ErrorCode;
+import com.techshop.userservice.exception.AppException;
 import com.techshop.userservice.model.User;
 import com.techshop.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -20,12 +20,12 @@ public class UserService {
 
     public User getById(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy user id=" + id));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
     public User getByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy user: " + email));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
     public List<User> getAll() {
@@ -50,7 +50,7 @@ public class UserService {
 
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy user id=" + id);
+            throw new AppException(ErrorCode.USER_NOT_FOUND);
         }
         userRepository.deleteById(id);
     }

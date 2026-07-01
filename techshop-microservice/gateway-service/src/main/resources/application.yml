@@ -133,7 +133,7 @@ spring:
         # Cart Service
         # ======================================================
         - id: cart-service
-          uri: lb://cart-service
+          uri: lb://order-service
           predicates:
             - Path=/api/cart/**
           filters:
@@ -199,7 +199,7 @@ spring:
         # Review Service
         # ======================================================
         - id: review-service
-          uri: lb://review-service
+          uri: lb://product-service
           predicates:
             - Path=/api/reviews/**
           filters:

@@ -2,6 +2,8 @@ package com.techshop.productservice.service;
 
 import com.techshop.common.service.CloudinaryService;
 import com.techshop.productservice.dto.ProductRequest;
+import com.techshop.productservice.enums.ErrorCode;
+import com.techshop.productservice.exception.AppException;
 import com.techshop.productservice.model.Category;
 import com.techshop.productservice.model.Product;
 import com.techshop.productservice.repository.CategoryRepository;
@@ -13,10 +15,8 @@ import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 
@@ -44,55 +44,39 @@ public class ProductService {
         return productRepository.searchByKeyword(keyword, pageable);
     }
 
-    /**
-     * Get product by ID with Redis caching
-     * Cache name: "products", Key: product ID
-     * TTL: 10 minutes (configured in RedisConfig)
-     */
     @Cacheable(value = "products", key = "#id")
     public Product getById(Long id) {
         log.info("Cache MISS - Fetching product {} from database", id);
         return productRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy sản phẩm id=" + id));
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
     }
 
-    /**
-     * Create product and evict all products cache
-     */
     @CacheEvict(value = "products", allEntries = true)
     public Product create(ProductRequest request) {
         log.info("Creating new product and clearing cache");
-        // Validate price > 0
+        
         if (request.getPrice() == null || request.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá phải lớn hơn 0");
+            throw new AppException(ErrorCode.INVALID_PRICE);
         }
 
-        // Validate salePrice > 0 (nếu có)
         if (request.getSalePrice() != null) {
-            if (request.getSalePrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá khuyến mãi phải lớn hơn 0");
-            }
-            // Validate salePrice <= price
-            if (request.getSalePrice().compareTo(request.getPrice()) > 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá khuyến mãi phải nhỏ hơn hoặc bằng giá gốc");
+            if (request.getSalePrice().compareTo(java.math.BigDecimal.ZERO) <= 0 || 
+                request.getSalePrice().compareTo(request.getPrice()) > 0) {
+                throw new AppException(ErrorCode.INVALID_SALE_PRICE);
             }
         }
 
-        // Check SKU unique
         if (request.getSku() != null && !request.getSku().trim().isEmpty()) {
             boolean skuExists = productRepository.existsBySku(request.getSku());
             if (skuExists) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã SKU đã tồn tại");
+                throw new AppException(ErrorCode.SKU_EXISTED);
             }
         }
 
-        // Validate category exists
         Category category = null;
         if (request.getCategoryId() != null) {
             category = categoryRepository.findById(request.getCategoryId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                            "Không tìm thấy danh mục id=" + request.getCategoryId()));
+                    .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
         }
 
         Product product = Product.builder()
@@ -112,45 +96,33 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    /**
-     * Update product and update cache
-     */
     @CachePut(value = "products", key = "#id")
     public Product update(Long id, ProductRequest request) {
         log.info("Updating product {} and refreshing cache", id);
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy sản phẩm id=" + id));
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        // Validate price > 0
         if (request.getPrice() == null || request.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá phải lớn hơn 0");
+            throw new AppException(ErrorCode.INVALID_PRICE);
         }
 
-        // Validate salePrice > 0 (nếu có)
         if (request.getSalePrice() != null) {
-            if (request.getSalePrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá khuyến mãi phải lớn hơn 0");
-            }
-            // Validate salePrice <= price
-            if (request.getSalePrice().compareTo(request.getPrice()) > 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giá khuyến mãi phải nhỏ hơn hoặc bằng giá gốc");
+            if (request.getSalePrice().compareTo(java.math.BigDecimal.ZERO) <= 0 || 
+                request.getSalePrice().compareTo(request.getPrice()) > 0) {
+                throw new AppException(ErrorCode.INVALID_SALE_PRICE);
             }
         }
 
-        // Check SKU unique (exclude current product)
         if (request.getSku() != null && !request.getSku().trim().isEmpty()) {
             Product existingProduct = productRepository.findBySku(request.getSku());
             if (existingProduct != null && !existingProduct.getId().equals(id)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã SKU đã tồn tại");
+                throw new AppException(ErrorCode.SKU_EXISTED);
             }
         }
 
-        // Validate category exists
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCategoryId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                            "Không tìm thấy danh mục id=" + request.getCategoryId()));
+                    .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
             product.setCategory(category);
         }
 
@@ -167,15 +139,11 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    /**
-     * Delete product and evict from cache
-     */
     @CacheEvict(value = "products", key = "#id")
     public void delete(Long id) {
         log.info("Deleting product {} and removing from cache", id);
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy sản phẩm id=" + id));
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
         product.setActive(false);
         productRepository.save(product);
         log.info("Product {} soft-deleted", id);

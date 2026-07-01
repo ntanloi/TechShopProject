@@ -28,6 +28,7 @@ public class SecurityConfig {
                         // Public endpoints - GET only
                         .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/reviews/product/**").permitAll()
                         
                         // Admin only - POST, PUT, DELETE
                         .requestMatchers(HttpMethod.POST, "/products/**").hasRole("ADMIN")
@@ -36,6 +37,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/categories/**").hasRole("ADMIN")
+                        
+                        // Admin reviews delete
+                        .requestMatchers(HttpMethod.DELETE, "/reviews/admin/**").hasRole("ADMIN")
                         
                         .anyRequest().authenticated()
                 )

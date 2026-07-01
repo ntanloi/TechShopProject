@@ -77,10 +77,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private boolean isPublicGetPath(String path, String method) {
-        // Only GET requests to products and categories are public
+        // Only GET requests to products, categories and reviews are public
         if ("GET".equalsIgnoreCase(method)) {
             return path.startsWith("/products")
-                    || path.startsWith("/categories");
+                    || path.startsWith("/categories")
+                    || path.startsWith("/reviews/product");
         }
         
         // These paths are always public
