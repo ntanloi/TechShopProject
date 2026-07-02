@@ -10,6 +10,7 @@
 # OS
 .DS_Store
 Thumbs.db
-# agent
+
+# agents
 .agents/
 gearvn-clone-master
