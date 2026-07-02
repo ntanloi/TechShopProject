@@ -1,13 +1,13 @@
 package com.techshop.productservice.service;
 
 import com.techshop.common.service.CloudinaryService;
+import com.techshop.productservice.enums.ErrorCode;
+import com.techshop.productservice.exception.AppException;
 import com.techshop.productservice.model.Category;
 import com.techshop.productservice.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.List;
@@ -25,15 +25,12 @@ public class CategoryService {
 
     public Category getById(Long id) {
         return categoryRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy danh mục id=" + id));
+                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
     }
 
     public Category create(Category category) {
-        // Validate name không trùng
         if (categoryRepository.existsByName(category.getName())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
-                    "Tên danh mục đã tồn tại");
+            throw new AppException(ErrorCode.CATEGORY_EXISTED);
         }
         return categoryRepository.save(category);
     }
@@ -41,11 +38,9 @@ public class CategoryService {
     public Category update(Long id, Category updated) {
         Category category = getById(id);
         
-        // Validate name không trùng (exclude current category)
         Category existingCategory = categoryRepository.findByName(updated.getName());
         if (existingCategory != null && !existingCategory.getId().equals(id)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
-                    "Tên danh mục đã tồn tại");
+            throw new AppException(ErrorCode.CATEGORY_EXISTED);
         }
         
         category.setName(updated.getName());
@@ -56,15 +51,12 @@ public class CategoryService {
     }
 
     public void delete(Long id) {
-        if (!categoryRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy danh mục id=" + id);
-        }
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
         
-        // Check category có products trước khi xóa
         long productCount = categoryRepository.countProductsByCategoryId(id);
         if (productCount > 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
-                    "Không thể xóa danh mục đang có " + productCount + " sản phẩm");
+            throw new AppException(ErrorCode.CATEGORY_HAS_PRODUCTS);
         }
         
         categoryRepository.deleteById(id);

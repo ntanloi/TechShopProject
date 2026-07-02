@@ -19,8 +19,37 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Product> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
-    // Check SKU uniqueness
     boolean existsBySku(String sku);
     
     Product findBySku(String sku);
+
+    // Filter by category slug
+    @Query("SELECT p FROM Product p JOIN p.category c WHERE p.active = true AND LOWER(c.slug) = LOWER(:slug)")
+    Page<Product> findByCategorySlugAndActiveTrue(@Param("slug") String slug, Pageable pageable);
+
+    // Filter by category slug with keyword
+    @Query("SELECT p FROM Product p JOIN p.category c WHERE p.active = true AND LOWER(c.slug) = LOWER(:slug) AND " +
+           "(LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(p.brand) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Product> findByCategorySlugAndKeyword(@Param("slug") String slug, @Param("keyword") String keyword, Pageable pageable);
+
+    // Advanced filter: optional brand, optional minPrice, optional maxPrice, optional category slug
+    @Query("SELECT p FROM Product p LEFT JOIN p.category c WHERE p.active = true " +
+           "AND (:categorySlug IS NULL OR LOWER(c.slug) = LOWER(:categorySlug)) " +
+           "AND (:brand IS NULL OR LOWER(p.brand) = LOWER(:brand)) " +
+           "AND (:minPrice IS NULL OR p.price >= :minPrice) " +
+           "AND (:maxPrice IS NULL OR p.price <= :maxPrice) " +
+           "AND (:keyword IS NULL OR " +
+           "     LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "     LOWER(p.brand) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Product> findWithFilters(
+            @Param("categorySlug") String categorySlug,
+            @Param("brand") String brand,
+            @Param("minPrice") java.math.BigDecimal minPrice,
+            @Param("maxPrice") java.math.BigDecimal maxPrice,
+            @Param("keyword") String keyword,
+            Pageable pageable);
+
+    // Count active products by category slug
+    @Query("SELECT COUNT(p) FROM Product p JOIN p.category c WHERE p.active = true AND LOWER(c.slug) = LOWER(:slug)")
+    long countByCategorySlug(@Param("slug") String slug);
 }

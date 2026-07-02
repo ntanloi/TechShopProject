@@ -2,6 +2,7 @@
 .env
 .env.local
 
+
 # IDE
 .vscode/
 .idea/
@@ -9,3 +10,7 @@
 # OS
 .DS_Store
 Thumbs.db
+
+# agents
+.agents/
+gearvn-clone-master

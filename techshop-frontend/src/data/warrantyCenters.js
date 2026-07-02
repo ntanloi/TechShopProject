@@ -1,0 +1,161 @@
+export const southWarrantyCenters = [
+  {
+    brand: "GVN",
+    centerName: "TTBH GEARVN",
+    contact: "1800.6975 - Nhánh 2",
+    address: "TTBH KV Miền Nam",
+  },
+  {
+    brand: "LG",
+    centerName: "TTBH LG QUẬN 1",
+    contact: "18001503",
+    address: "Số 55, Sương Nguyệt Ánh",
+  },
+  {
+    brand: "SONY",
+    centerName: "TTBH SONY",
+    contact: "1800588885",
+    address: "163 Quang Trung, Phường 10",
+  },
+  {
+    brand: "ASUS",
+    centerName: "TTBH ASUS",
+    contact: "18006588",
+    address: "EverGrow - The Sarus, Thành phố Hồ Chí Minh",
+  },
+  {
+    brand: "DELL",
+    centerName: "TTBH DELL",
+    contact: "028 3842 4342",
+    address: "23 Nguyễn Thị Huỳnh",
+  },
+  {
+    brand: "MSI",
+    centerName: "TTBH MSI LINH KIỆN",
+    contact: "028 66732331",
+    address: "133/16 Huỳnh Mẫn Đạt",
+  },
+  {
+    brand: "ZOTAC",
+    centerName: "TTBH ZOTAC",
+    contact: "0987285669",
+    address: "69/18 Nguyễn Cửu Đàm",
+  },
+  {
+    brand: "ACER",
+    centerName: "TTBH ACER",
+    contact: "1900969601",
+    address: "585 Điện Biên Phủ",
+  },
+  {
+    brand: "MAI HOÀNG",
+    centerName: "TTBH MAI HOÀNG",
+    contact: "0973196066",
+    address: "666/35, Đường 3/2",
+  },
+  {
+    brand: "KTC",
+    centerName: "TTBH KHẢI THIÊN",
+    contact: "38.341323 - 38.341324",
+    address: "384 Nguyễn Thị Minh Khai",
+  },
+  {
+    brand: "SPC",
+    centerName: "TTBH VĨNH XUÂN",
+    contact: "0908695396",
+    address: "658/21 Cách Mạng Tháng 8",
+  },
+  {
+    brand: "TÂN DOANH",
+    centerName: "TTBH TÂN DOANH",
+    contact: "028 22006666",
+    address: "496 Ba Tháng Hai",
+  },
+  {
+    brand: "VIỄN SƠN",
+    centerName: "TTBH VIỄN SƠN",
+    contact: "028 3925707(100)",
+    address: "175 Nguyễn Thị Minh Khai",
+  },
+];
+
+export const northWarrantyCenters = [
+  {
+    brand: "GEARVN THÁI HÀ",
+    centerName: "TTBH GEARVN HN",
+    contact: "02877787998",
+    address: "162-164 Thái Hà, Trung Liệt",
+  },
+  {
+    brand: "FPT",
+    centerName: "TTBH FPT",
+    contact: "02473000911",
+    address: "27 Yên Lãng, Trung Liệt",
+  },
+  {
+    brand: "DIGIWORLD",
+    centerName: "TTBH DIGICARE",
+    contact: "02473080880",
+    address: "106 Ngõ 34 Hoàng Cầu",
+  },
+  {
+    brand: "SPC",
+    centerName: "TTBH VĨNH XUÂN",
+    contact: "02473001800",
+    address: "150 Thái Hà, Trung Liệt",
+  },
+  {
+    brand: "TSC",
+    centerName: "TTBH TSC",
+    contact: "02439656656",
+    address: "183 Phố Đặng Tiến Đông",
+  },
+  {
+    brand: "HƯNG LONG",
+    centerName: "TTBH HÙNG LONG",
+    contact: "0987983420",
+    address: "Tầng 2 số 160 Trần Đại Nghĩa",
+  },
+  {
+    brand: "MAI HOÀNG",
+    centerName: "TTBH MAI HOÀNG",
+    contact: "02436285868",
+    address: "241 Phố Vọng, Đồng Tâm",
+  },
+  {
+    brand: "ACER",
+    centerName: "TTBH ACER",
+    contact: "01900969601",
+    address: "9A Đào Duy Anh, Kim Liên",
+  },
+  {
+    brand: "NINZA",
+    centerName: "TTBH NINZA",
+    contact: "02838115086",
+    address: "19h1 Trần Kim Xuyến",
+  },
+  {
+    brand: "KTC",
+    centerName: "TTBH KHẢI THIÊN",
+    contact: "0986502468",
+    address: "Tầng 3 số 14 Trúc Khê",
+  },
+  {
+    brand: "DGT",
+    centerName: "TTBH DGT",
+    contact: "02436472666",
+    address: "03-Manor 2 Str. Sunrise C",
+  },
+  {
+    brand: "NAM THÀNH",
+    centerName: "TTBH NAM THÀNH",
+    contact: "02437834530",
+    address: "38TT4A Đô thị Văn Quán",
+  },
+  {
+    brand: "LENOVO",
+    centerName: "TTBH LENOVO",
+    contact: "02432757666",
+    address: "156 Phố Thái Thịnh",
+  },
+];

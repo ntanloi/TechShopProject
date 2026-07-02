@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 export default function ProductCard({ product }) {
   const { addToCart } = useCartStore();
   const { user } = useAuth();
-  const nav = useNavigate();
+  const navigate = useNavigate();
 
   const price = product.salePrice || product.price;
   const originalPrice = product.salePrice ? product.price : null;
@@ -20,7 +20,7 @@ export default function ProductCard({ product }) {
     e.preventDefault();
     if (!user) {
       toast.info("Vui lòng đăng nhập để thêm vào giỏ hàng");
-      nav("/login");
+      navigate("/login");
       return;
     }
     try {
@@ -41,71 +41,85 @@ export default function ProductCard({ product }) {
   return (
     <Link
       to={`/products/${product.id}`}
-      className="group bg-white rounded-2xl shadow-sm hover:shadow-xl border border-gray-100 overflow-hidden transition-all duration-300 hover:-translate-y-1 flex flex-col"
+      className="group bg-white rounded-lg border border-gray-200 hover:border-red-500 hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden relative"
     >
-      {/* Image */}
-      <div className="relative aspect-square bg-gray-50 overflow-hidden">
+      {/* Discount Badge */}
+      {discount > 0 && (
+        <span className="absolute top-2 left-2 bg-[#E30019] text-white text-[11px] font-extrabold px-1.5 py-0.5 rounded z-10">
+          -{discount}%
+        </span>
+      )}
+
+      {/* Image Block */}
+      <div className="relative w-full aspect-square bg-white flex items-center justify-center p-3 overflow-hidden">
         {product.imageUrl ? (
           <img
             src={product.imageUrl}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "/placeholder.png";
+            }}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-300">
-            <ShoppingCart className="h-12 w-12" />
+          <div className="w-full h-full flex items-center justify-center text-gray-200 bg-gray-50">
+            <ShoppingCart className="h-10 w-10" />
           </div>
-        )}
-        {discount > 0 && (
-          <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-lg">
-            -{discount}%
-          </span>
         )}
       </div>
 
-      {/* Info */}
-      <div className="p-4 flex flex-col gap-2 flex-1">
+      {/* Product Info */}
+      <div className="p-3.5 flex flex-col gap-1.5 flex-1 border-t border-gray-50">
         {product.brand && (
-          <span className="text-xs text-orange-500 font-medium uppercase tracking-wide">
+          <span className="text-[10px] text-[#E30019] font-extrabold uppercase tracking-widest">
             {product.brand}
           </span>
         )}
-        <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug">
+        
+        <h3 className="text-[13px] font-bold text-gray-800 line-clamp-2 leading-tight group-hover:text-red-600 transition-colors h-10">
           {product.name}
         </h3>
 
-        {/* Rating placeholder */}
-        <div className="flex items-center gap-1">
+        {/* Spec tags (Show subcategory if exists) */}
+        {product.subcategory && (
+          <div className="flex flex-wrap gap-1 mt-0.5">
+            <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-medium">
+              {product.subcategory}
+            </span>
+          </div>
+        )}
+
+        {/* Rating */}
+        <div className="flex items-center gap-0.5 mt-1">
           {[1, 2, 3, 4, 5].map((s) => (
             <Star
               key={s}
-              className={`h-3 w-3 ${s <= 4 ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
+              className={`h-3 w-3 ${s <= 5 ? "text-yellow-400 fill-yellow-400" : "text-gray-200"}`}
             />
           ))}
-          <span className="text-xs text-gray-500 ml-1">(0)</span>
+          <span className="text-[11px] text-gray-400 ml-1">(5)</span>
         </div>
 
-        {/* Price */}
-        <div className="mt-auto pt-2">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-orange-500">
-              {Number(price).toLocaleString("vi-VN")}₫
+        {/* Prices */}
+        <div className="mt-auto pt-2 flex flex-col gap-0.5">
+          {originalPrice && (
+            <span className="text-[11px] text-gray-400 line-through leading-none">
+              {Number(originalPrice).toLocaleString("vi-VN")}₫
             </span>
-            {originalPrice && (
-              <span className="text-xs text-gray-400 line-through">
-                {Number(originalPrice).toLocaleString("vi-VN")}₫
-              </span>
-            )}
-          </div>
+          )}
+          <span className="text-[15px] font-extrabold text-[#E30019] leading-none">
+            {Number(price).toLocaleString("vi-VN")}₫
+          </span>
         </div>
 
-        {/* Add to cart */}
+        {/* Add to Cart Button */}
         <button
           onClick={handleAddToCart}
-          className="mt-2 w-full py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-xl transition flex items-center justify-center gap-2"
+          className="mt-3 w-full py-2 bg-gray-100 group-hover:bg-[#E30019] text-gray-700 group-hover:text-white text-xs font-bold rounded transition-colors flex items-center justify-center gap-1.5"
         >
-          <ShoppingCart className="h-4 w-4" />
-          Thêm vào giỏ
+          <ShoppingCart className="h-3.5 w-3.5" />
+          THÊM VÀO GIỎ
         </button>
       </div>
     </Link>

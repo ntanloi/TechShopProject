@@ -28,11 +28,16 @@ public class Product {
     private BigDecimal price;
 
     private BigDecimal salePrice;
-
     private String imageUrl;
     private String brand;
     private String sku;         // mã sản phẩm
     private String slug;        // URL-friendly name
+
+    @Column(columnDefinition = "TEXT")
+    private String images;      // Danh sách ảnh (JSON array string hoặc phân tách bằng dấu phẩy)
+
+    private String subcategory; // Danh mục con
+    private String accessoryType; // Loại phụ kiện
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
