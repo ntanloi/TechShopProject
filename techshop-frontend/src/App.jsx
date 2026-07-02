@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { Routes, Route, useLocation, Navigate, useParams } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -15,11 +15,19 @@ import Home from "@/pages/Home.jsx";
 import Products from "@/pages/Products.jsx";
 import ProductDetail from "@/pages/ProductDetail.jsx";
 import About from "@/pages/About.jsx";
+import TradeInPricing from "@/pages/TradeInPricing.jsx";
+import News from "@/pages/News.jsx";
+import WarrantyLookup from "@/pages/WarrantyLookup.jsx";
+import TechnicalSupport from "@/pages/TechnicalSupport.jsx";
+import Showroom from "@/pages/Showroom.jsx";
 import NotFound from "@/pages/NotFound.jsx";
 
 // Auth pages
 import Login from "@/pages/Login.jsx";
 import Register from "@/pages/Register.jsx";
+import TermsOfService from "@/pages/TermsOfService.jsx";
+import PrivacyPolicy from "@/pages/PrivacyPolicy.jsx";
+import ForgotPassword from "@/pages/ForgotPassword.jsx";
 
 // User pages
 import Cart from "@/pages/Cart.jsx";
@@ -36,12 +44,20 @@ import AdminCategories from "@/pages/admin/AdminCategories.jsx";
 import AdminOrders from "@/pages/admin/AdminOrders.jsx";
 import AdminUsers from "@/pages/admin/AdminUsers.jsx";
 import AdminInventory from "@/pages/admin/AdminInventory.jsx";
+import HotDealsGaming from "@/pages/HotDealsGaming.jsx";
+
+
+// Helper: redirect /category/:slug → /products?category=:slug
+function CategoryRedirect() {
+  const { slug } = useParams();
+  return <Navigate to={`/products?category=${slug}`} replace />;
+}
 
 export default function App() {
   const location = useLocation();
 
   const hideLayout =
-    ["/login", "/register"].includes(location.pathname) ||
+    ["/login", "/register", "/forgot-password"].includes(location.pathname) ||
     location.pathname.startsWith("/admin");
 
   return (
@@ -55,12 +71,28 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetail />} />
+          {/* Category slug redirect: /category/laptop-gaming → /products?category=laptop-gaming */}
+          <Route path="/category/:slug" element={<CategoryRedirect />} />
           <Route path="/categories" element={<Products />} />
           <Route path="/about" element={<About />} />
+          <Route path="/trade-in-pricing" element={<TradeInPricing />} />
+          <Route path="/trade-in" element={<TradeInPricing />} />
+          <Route path="/hot-deals" element={<HotDealsGaming />} />
+          <Route path="/laptop-gaming-hot-deals" element={<HotDealsGaming />} />
+          <Route path="/news" element={<News />} />
+          <Route path="/news/:slug" element={<News />} />
+          <Route path="/warranty-lookup" element={<WarrantyLookup />} />
+          <Route path="/warranty-policy" element={<WarrantyLookup />} />
+          <Route path="/shipping-policy" element={<About />} />
+          <Route path="/on-site-technical-support" element={<TechnicalSupport />} />
+          <Route path="/showroom" element={<Showroom />} />
 
           {/* ===== AUTH ===== */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
           {/* ===== USER ===== */}
           <Route path="/cart" element={<Cart />} />
@@ -87,7 +119,7 @@ export default function App() {
 
       {!hideLayout && <Footer />}
 
-      <ChatBot />
+      {!hideLayout && <ChatBot />}
 
       <ToastContainer
         position="top-right"

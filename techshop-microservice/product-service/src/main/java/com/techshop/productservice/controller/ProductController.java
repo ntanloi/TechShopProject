@@ -6,11 +6,14 @@ import com.techshop.productservice.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/products")
@@ -21,8 +24,35 @@ public class ProductController {
 
     // =================== PUBLIC ===================
 
+    /**
+     * GET /products?page=0&size=20&category=laptop-gaming&brand=ASUS&minPrice=5000000&maxPrice=30000000&sort=price_asc
+     * Supports optional filters: category slug, brand, price range, keyword search, sort
+     */
     @GetMapping
-    public ResponseEntity<Page<Product>> getAll(Pageable pageable) {
+    public ResponseEntity<Page<Product>> getAll(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        // If any filter active, use filtered query
+        boolean hasFilters = (category != null && !category.isBlank())
+                || (brand != null && !brand.isBlank())
+                || minPrice != null
+                || maxPrice != null
+                || (keyword != null && !keyword.isBlank())
+                || (sort != null && !sort.isBlank());
+
+        if (hasFilters) {
+            return ResponseEntity.ok(productService.getFiltered(
+                    category, brand, minPrice, maxPrice, keyword, sort, page, size));
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(productService.getAll(pageable));
     }
 
@@ -36,9 +66,22 @@ public class ProductController {
         return ResponseEntity.ok(productService.search(keyword, pageable));
     }
 
-    @GetMapping("/category/{categoryId}")
-    public ResponseEntity<Page<Product>> getByCategory(@PathVariable Long categoryId, Pageable pageable) {
-        return ResponseEntity.ok(productService.getByCategory(categoryId, pageable));
+    /**
+     * GET /products/category/{categoryIdOrSlug}
+     * Supports both numeric ID and string slug
+     */
+    @GetMapping("/category/{categoryIdOrSlug}")
+    public ResponseEntity<Page<Product>> getByCategory(
+            @PathVariable String categoryIdOrSlug,
+            Pageable pageable) {
+        // Try numeric ID first
+        try {
+            Long categoryId = Long.parseLong(categoryIdOrSlug);
+            return ResponseEntity.ok(productService.getByCategory(categoryId, pageable));
+        } catch (NumberFormatException e) {
+            // Treat as slug
+            return ResponseEntity.ok(productService.getByCategorySlug(categoryIdOrSlug, pageable));
+        }
     }
 
     // =================== ADMIN ===================

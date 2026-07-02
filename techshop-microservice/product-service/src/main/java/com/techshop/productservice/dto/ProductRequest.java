@@ -28,4 +28,7 @@ public class ProductRequest {
     private String slug;
     private Long categoryId;
     private String specifications;
+    private String images;
+    private String subcategory;
+    private String accessoryType;
 }

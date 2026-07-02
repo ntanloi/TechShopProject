@@ -19,6 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +40,43 @@ public class ProductService {
     public Page<Product> getByCategory(Long categoryId, Pageable pageable) {
         log.info("Fetching products by category {} from database (not cached - pagination)", categoryId);
         return productRepository.findByCategoryIdAndActiveTrue(categoryId, pageable);
+    }
+
+    public Page<Product> getByCategorySlug(String slug, Pageable pageable) {
+        log.info("Fetching products by category slug '{}' from database", slug);
+        return productRepository.findByCategorySlugAndActiveTrue(slug, pageable);
+    }
+
+    public Page<Product> getFiltered(
+            String categorySlug,
+            String brand,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String keyword,
+            String sortBy,
+            int page,
+            int size) {
+        log.info("Fetching products with filters: category={}, brand={}, minPrice={}, maxPrice={}, keyword={}, sort={}",
+                categorySlug, brand, minPrice, maxPrice, keyword, sortBy);
+
+        // Build sort
+        Sort sort = Sort.unsorted();
+        if ("price_asc".equals(sortBy)) {
+            sort = Sort.by(Sort.Direction.ASC, "price");
+        } else if ("price_desc".equals(sortBy)) {
+            sort = Sort.by(Sort.Direction.DESC, "price");
+        } else if ("newest".equals(sortBy)) {
+            sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        // Normalize empty strings to null for JPQL
+        String catSlug = (categorySlug != null && !categorySlug.isBlank()) ? categorySlug.trim() : null;
+        String brandFilter = (brand != null && !brand.isBlank()) ? brand.trim() : null;
+        String kw = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
+
+        return productRepository.findWithFilters(catSlug, brandFilter, minPrice, maxPrice, kw, pageable);
     }
 
     public Page<Product> search(String keyword, Pageable pageable) {
@@ -90,6 +130,9 @@ public class ProductService {
                 .slug(request.getSlug())
                 .category(category)
                 .specifications(request.getSpecifications())
+                .images(request.getImages())
+                .subcategory(request.getSubcategory())
+                .accessoryType(request.getAccessoryType())
                 .active(true)
                 .build();
 
@@ -135,6 +178,9 @@ public class ProductService {
         product.setSku(request.getSku());
         product.setSlug(request.getSlug());
         product.setSpecifications(request.getSpecifications());
+        product.setImages(request.getImages());
+        product.setSubcategory(request.getSubcategory());
+        product.setAccessoryType(request.getAccessoryType());
 
         return productRepository.save(product);
     }
