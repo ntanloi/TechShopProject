@@ -10,6 +10,10 @@ public class KafkaTopicConstants {
     // Notification Service sẽ lắng nghe topic này để gửi email Welcome
     public static final String USER_REGISTERED_TOPIC = "user-registered-topic";
 
+    // Topic nhận sự kiện yêu cầu gửi OTP
+    // Notification Service lắng nghe → gửi email OTP xác thực
+    public static final String OTP_REQUESTED_TOPIC = "otp-requested-topic";
+
     // Ngăn khởi tạo class tiện ích này (utility class pattern)
     private KafkaTopicConstants() {}
 }

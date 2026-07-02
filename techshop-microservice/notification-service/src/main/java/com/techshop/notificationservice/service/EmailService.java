@@ -90,6 +90,85 @@ public class EmailService {
         sendHtmlEmail(request.getEmail(), subject, htmlBody);
     }
 
+    /**
+     * Gửi email chứa mã OTP 6 chữ số.
+     *
+     * @param to        địa chỉ email người nhận
+     * @param otpCode   mã OTP plain text (6 số)
+     * @param expiresIn số phút hiệu lực
+     */
+    @Async
+    public void sendOtpEmail(String to, String otpCode, int expiresIn) {
+        String subject = "[TechShop] Mã xác thực OTP của bạn";
+        // Tách từng chữ số để hiển thị từng ô riêng trong email
+        String[] digits = otpCode.split("");
+        StringBuilder digitBoxes = new StringBuilder();
+        for (String d : digits) {
+            digitBoxes.append(String.format(
+                "<span style=\"display:inline-block;width:42px;height:52px;line-height:52px;" +
+                "text-align:center;font-size:28px;font-weight:900;color:#E30019;" +
+                "background:#fff;border:2px solid #E30019;border-radius:10px;margin:0 4px;\">%s</span>", d));
+        }
+
+        String htmlBody = String.format("""
+            <div style="font-family:Arial,sans-serif;line-height:1.6;color:#333;max-width:520px;margin:0 auto;
+                        border:1px solid #eee;border-radius:12px;overflow:hidden;">
+
+                <!-- Header -->
+                <div style="background:#E30019;padding:28px 24px;text-align:center;">
+                    <p style="margin:0 0 6px;font-size:13px;color:#ffcdd2;letter-spacing:2px;text-transform:uppercase;">
+                        Xác thực tài khoản
+                    </p>
+                    <h1 style="margin:0;font-size:26px;color:#fff;font-weight:900;letter-spacing:1px;">
+                        Tech<span style="color:#FFE600;">Shop</span>
+                    </h1>
+                </div>
+
+                <!-- Body -->
+                <div style="padding:32px 28px;background:#fff;">
+                    <p style="font-size:15px;margin:0 0 8px;">Xin chào,</p>
+                    <p style="font-size:14px;color:#555;margin:0 0 28px;">
+                        Đây là mã xác thực OTP để hoàn tất đăng nhập / đăng ký tại TechShop.
+                        Mã có hiệu lực trong <strong>%d phút</strong>.
+                    </p>
+
+                    <!-- OTP Box -->
+                    <div style="text-align:center;padding:24px 0;background:#fef2f2;border-radius:10px;margin-bottom:28px;">
+                        <p style="margin:0 0 14px;font-size:12px;color:#999;text-transform:uppercase;
+                                  letter-spacing:1.5px;">Mã xác thực của bạn</p>
+                        <div>%s</div>
+                        <p style="margin:16px 0 0;font-size:12px;color:#999;">Hiệu lực: %d phút</p>
+                    </div>
+
+                    <!-- Warning -->
+                    <div style="background:#fff8f8;border-left:4px solid #E30019;padding:14px 16px;
+                                border-radius:0 8px 8px 0;margin-bottom:20px;">
+                        <p style="margin:0;font-size:13px;color:#555;">
+                            ⚠️ <strong>Lưu ý bảo mật:</strong> Không chia sẻ mã này với bất kỳ ai.
+                            TechShop sẽ không bao giờ yêu cầu bạn cung cấp mã OTP qua điện thoại hoặc chat.
+                        </p>
+                    </div>
+
+                    <p style="font-size:13px;color:#888;margin:0;">
+                        Nếu bạn không thực hiện yêu cầu này, hãy bỏ qua email này hoặc liên hệ
+                        <a href="mailto:support@techshop.vn" style="color:#E30019;">support@techshop.vn</a>.
+                    </p>
+                </div>
+
+                <!-- Footer -->
+                <div style="background:#f9f9f9;padding:16px;text-align:center;font-size:12px;color:#aaa;">
+                    <p style="margin:4px 0;">Hotline: <strong style="color:#E30019;">1800.6975</strong> (Miễn phí)</p>
+                    <p style="margin:4px 0;">© 2026 TechShop — Thiết bị điện tử chính hãng</p>
+                </div>
+            </div>
+            """,
+                expiresIn,
+                digitBoxes.toString(),
+                expiresIn
+        );
+        sendHtmlEmail(to, subject, htmlBody);
+    }
+
     @Async
     public void sendWelcomeEmail(String to, String fullName) {
         String subject = "Chào mừng bạn đến với TechShop!";

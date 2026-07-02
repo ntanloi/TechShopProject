@@ -125,6 +125,24 @@ public class NotificationController {
         }
     }
 
+    /**
+     * Gửi email OTP — được gọi từ user-service qua Feign.
+     * Endpoint này được permit tất cả (nội bộ, không cần JWT).
+     */
+    @PostMapping("/email/otp")
+    public ResponseEntity<String> sendOtpEmail(@RequestParam String email,
+                                                @RequestParam String otpCode,
+                                                @RequestParam int    expiresIn) {
+        log.info("[NotificationController] sendOtpEmail: to={}", email);
+        try {
+            emailService.sendOtpEmail(email, otpCode, expiresIn);
+            return ResponseEntity.ok("Email OTP đã được gửi");
+        } catch (Exception e) {
+            log.error("[NotificationController] Lỗi gửi OTP email tới {}: {}", email, e.getMessage());
+            return ResponseEntity.status(500).body("Lỗi gửi email OTP: " + e.getMessage());
+        }
+    }
+
     // =================== ADMIN ===================
 
     @GetMapping

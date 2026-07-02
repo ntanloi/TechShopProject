@@ -5,10 +5,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+/**
+ * Feign Client gọi notification-service.
+ *
+ * LƯU Ý: Việc gửi OTP email KHÔNG qua Feign nữa.
+ * OTP email được gửi qua Kafka (Outbox Pattern → otp-requested-topic).
+ * Client này chỉ dùng cho các call đồng bộ thực sự cần thiết.
+ */
 @FeignClient(name = "notification-service", path = "/notifications")
 public interface NotificationClient {
 
     @PostMapping("/email/welcome")
-    ResponseEntity<String> sendWelcomeEmail(@RequestParam("email") String email,
+    ResponseEntity<String> sendWelcomeEmail(@RequestParam("email")    String email,
                                              @RequestParam("fullName") String fullName);
 }

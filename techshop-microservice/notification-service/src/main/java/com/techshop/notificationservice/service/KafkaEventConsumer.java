@@ -2,6 +2,7 @@ package com.techshop.notificationservice.service;
 
 import com.techshop.notificationservice.dto.OrderConfirmEmailRequest;
 import com.techshop.notificationservice.event.OrderPlacedEvent;
+import com.techshop.notificationservice.event.OtpRequestedEvent;
 import com.techshop.notificationservice.event.PaymentCompletedEvent;
 import com.techshop.notificationservice.event.UserRegisteredEvent;
 import com.techshop.notificationservice.model.NotificationType;
@@ -33,14 +34,6 @@ public class KafkaEventConsumer {
     // CONSUMER 1: Lắng nghe sự kiện người dùng đăng ký mới
     // ──────────────────────────────────────────────────────────────
 
-    /**
-     * Lắng nghe topic 'user-registered-topic'.
-     * Khi nhận được message, gửi email chào mừng cho user.
-     *
-     * groupId: notification-service-group → mỗi service có group-id riêng
-     * để tất cả instance của notification-service đều cùng một nhóm,
-     * đảm bảo mỗi message chỉ được xử lý bởi MỘT instance.
-     */
     @KafkaListener(
             topics = "user-registered-topic",
             groupId = "notification-service-group",
@@ -51,15 +44,42 @@ public class KafkaEventConsumer {
                 event.getUserId(), event.getEmail());
 
         try {
-            // Gửi email chào mừng (bất đồng bộ - có @Async trong EmailService)
             emailService.sendWelcomeEmail(event.getEmail(), event.getFullName());
-
             log.info("[Kafka Consumer] Đã gửi email Welcome cho userId={}", event.getUserId());
         } catch (Exception e) {
-            // Log lỗi nhưng không throw để Kafka không retry vô hạn
-            // Trong production nên dùng Dead Letter Topic (DLT) cho các message lỗi
             log.error("[Kafka Consumer] Lỗi gửi email Welcome cho userId={}: {}",
                     event.getUserId(), e.getMessage());
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // CONSUMER 1b: Lắng nghe sự kiện yêu cầu gửi OTP
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Lắng nghe topic 'otp-requested-topic'.
+     * Khi nhận được message, gửi email chứa mã OTP 6 số cho user.
+     *
+     * Luồng: user-service tạo OTP → lưu OutboxEvent → OutboxPublisher
+     *        publish lên Kafka → consumer này nhận → sendOtpEmail()
+     *
+     * KHÔNG gửi lại ACK thủ công — Spring Kafka tự ACK sau khi method return bình thường.
+     * Nếu method throw exception, Kafka sẽ retry theo cấu hình error handler.
+     */
+    @KafkaListener(
+            topics = "otp-requested-topic",
+            groupId = "notification-service-group",
+            containerFactory = "kafkaListenerContainerFactory"
+    )
+    public void handleOtpRequested(OtpRequestedEvent event) {
+        log.info("[Kafka Consumer] Nhận event OtpRequested: email={}", event.getEmail());
+
+        try {
+            emailService.sendOtpEmail(event.getEmail(), event.getOtpCode(), event.getExpiresInMinutes());
+            log.info("[Kafka Consumer] Đã gửi email OTP tới email={}", event.getEmail());
+        } catch (Exception e) {
+            log.error("[Kafka Consumer] Lỗi gửi email OTP tới email={}: {}",
+                    event.getEmail(), e.getMessage());
         }
     }
 
